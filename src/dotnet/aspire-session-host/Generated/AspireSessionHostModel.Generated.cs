@@ -105,7 +105,7 @@ namespace AspireSessionHost.Generated
     
     public static  CtxWriteDelegate<TraceNode[]> WriteTraceNodeArray = TraceNode.Write.Array();
     
-    protected override long SerializationHash => 1270678957797202853L;
+    protected override long SerializationHash => 6643283119414760680L;
     
     protected override Action<ISerializers> Register => RegisterDeclaredTypesSerializers;
     public static void RegisterDeclaredTypesSerializers(ISerializers serializers)
@@ -439,7 +439,7 @@ namespace AspireSessionHost.Generated
   
   
   /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:83</p>
+  /// <p>Generated from: AspireSessionHostModel.kt:85</p>
   /// </summary>
   public sealed class ResourceEndpoint : IPrintable, IEquatable<ResourceEndpoint>
   {
@@ -533,7 +533,7 @@ namespace AspireSessionHost.Generated
   
   
   /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:78</p>
+  /// <p>Generated from: AspireSessionHostModel.kt:80</p>
   /// </summary>
   public sealed class ResourceEnvironmentVariable : IPrintable, IEquatable<ResourceEnvironmentVariable>
   {
@@ -628,7 +628,7 @@ namespace AspireSessionHost.Generated
   
   
   /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:94</p>
+  /// <p>Generated from: AspireSessionHostModel.kt:96</p>
   /// </summary>
   public sealed class ResourceLog : IPrintable, IEquatable<ResourceLog>
   {
@@ -721,7 +721,7 @@ namespace AspireSessionHost.Generated
   
   
   /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:99</p>
+  /// <p>Generated from: AspireSessionHostModel.kt:101</p>
   /// </summary>
   public sealed class ResourceMetric : IPrintable, IEquatable<ResourceMetric>
   {
@@ -858,7 +858,7 @@ namespace AspireSessionHost.Generated
   
   
   /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:53</p>
+  /// <p>Generated from: AspireSessionHostModel.kt:55</p>
   /// </summary>
   public sealed class ResourceModel : IPrintable, IEquatable<ResourceModel>
   {
@@ -1041,7 +1041,7 @@ namespace AspireSessionHost.Generated
   
   
   /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:72</p>
+  /// <p>Generated from: AspireSessionHostModel.kt:74</p>
   /// </summary>
   public sealed class ResourceProperty : IPrintable, IEquatable<ResourceProperty>
   {
@@ -1144,7 +1144,7 @@ namespace AspireSessionHost.Generated
   
   
   /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:88</p>
+  /// <p>Generated from: AspireSessionHostModel.kt:90</p>
   /// </summary>
   public sealed class ResourceService : IPrintable, IEquatable<ResourceService>
   {
@@ -1249,7 +1249,7 @@ namespace AspireSessionHost.Generated
   
   
   /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:55</p>
+  /// <p>Generated from: AspireSessionHostModel.kt:57</p>
   /// </summary>
   public enum ResourceType {
     Project,
@@ -1260,7 +1260,7 @@ namespace AspireSessionHost.Generated
   
   
   /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:46</p>
+  /// <p>Generated from: AspireSessionHostModel.kt:48</p>
   /// </summary>
   public sealed class ResourceWrapper : RdBindableBase
   {
@@ -1464,6 +1464,8 @@ namespace AspireSessionHost.Generated
     [NotNull] public string Id {get; private set;}
     [NotNull] public string ProjectPath {get; private set;}
     public bool Debug {get; private set;}
+    [CanBeNull] public string LaunchProfile {get; private set;}
+    public bool DisableLaunchProfile {get; private set;}
     [CanBeNull] public string[] Args {get; private set;}
     [CanBeNull] public SessionEnvironmentVariable[] Envs {get; private set;}
     
@@ -1473,6 +1475,8 @@ namespace AspireSessionHost.Generated
       [NotNull] string id,
       [NotNull] string projectPath,
       bool debug,
+      [CanBeNull] string launchProfile,
+      bool disableLaunchProfile,
       [CanBeNull] string[] args,
       [CanBeNull] SessionEnvironmentVariable[] envs
     )
@@ -1483,16 +1487,20 @@ namespace AspireSessionHost.Generated
       Id = id;
       ProjectPath = projectPath;
       Debug = debug;
+      LaunchProfile = launchProfile;
+      DisableLaunchProfile = disableLaunchProfile;
       Args = args;
       Envs = envs;
     }
     //secondary constructor
     //deconstruct trait
-    public void Deconstruct([NotNull] out string id, [NotNull] out string projectPath, out bool debug, [CanBeNull] out string[] args, [CanBeNull] out SessionEnvironmentVariable[] envs)
+    public void Deconstruct([NotNull] out string id, [NotNull] out string projectPath, out bool debug, [CanBeNull] out string launchProfile, out bool disableLaunchProfile, [CanBeNull] out string[] args, [CanBeNull] out SessionEnvironmentVariable[] envs)
     {
       id = Id;
       projectPath = ProjectPath;
       debug = Debug;
+      launchProfile = LaunchProfile;
+      disableLaunchProfile = DisableLaunchProfile;
       args = Args;
       envs = Envs;
     }
@@ -1503,11 +1511,14 @@ namespace AspireSessionHost.Generated
       var id = reader.ReadString();
       var projectPath = reader.ReadString();
       var debug = reader.ReadBool();
+      var launchProfile = ReadStringNullable(ctx, reader);
+      var disableLaunchProfile = reader.ReadBool();
       var args = ReadStringArrayNullable(ctx, reader);
       var envs = ReadSessionEnvironmentVariableArrayNullable(ctx, reader);
-      var _result = new SessionModel(id, projectPath, debug, args, envs);
+      var _result = new SessionModel(id, projectPath, debug, launchProfile, disableLaunchProfile, args, envs);
       return _result;
     };
+    public static CtxReadDelegate<string> ReadStringNullable = JetBrains.Rd.Impl.Serializers.ReadString.NullableClass();
     public static CtxReadDelegate<string[]> ReadStringArrayNullable = JetBrains.Rd.Impl.Serializers.ReadString.Array().NullableClass();
     public static CtxReadDelegate<SessionEnvironmentVariable[]> ReadSessionEnvironmentVariableArrayNullable = SessionEnvironmentVariable.Read.Array().NullableClass();
     
@@ -1516,9 +1527,12 @@ namespace AspireSessionHost.Generated
       writer.Write(value.Id);
       writer.Write(value.ProjectPath);
       writer.Write(value.Debug);
+      WriteStringNullable(ctx, writer, value.LaunchProfile);
+      writer.Write(value.DisableLaunchProfile);
       WriteStringArrayNullable(ctx, writer, value.Args);
       WriteSessionEnvironmentVariableArrayNullable(ctx, writer, value.Envs);
     };
+    public static  CtxWriteDelegate<string> WriteStringNullable = JetBrains.Rd.Impl.Serializers.WriteString.NullableClass();
     public static  CtxWriteDelegate<string[]> WriteStringArrayNullable = JetBrains.Rd.Impl.Serializers.WriteString.Array().NullableClass();
     public static  CtxWriteDelegate<SessionEnvironmentVariable[]> WriteSessionEnvironmentVariableArrayNullable = SessionEnvironmentVariable.Write.Array().NullableClass();
     
@@ -1538,7 +1552,7 @@ namespace AspireSessionHost.Generated
     {
       if (ReferenceEquals(null, other)) return false;
       if (ReferenceEquals(this, other)) return true;
-      return Id == other.Id && ProjectPath == other.ProjectPath && Debug == other.Debug && Equals(Args, other.Args) && Equals(Envs, other.Envs);
+      return Id == other.Id && ProjectPath == other.ProjectPath && Debug == other.Debug && Equals(LaunchProfile, other.LaunchProfile) && DisableLaunchProfile == other.DisableLaunchProfile && Equals(Args, other.Args) && Equals(Envs, other.Envs);
     }
     //hash code trait
     public override int GetHashCode()
@@ -1548,6 +1562,8 @@ namespace AspireSessionHost.Generated
         hash = hash * 31 + Id.GetHashCode();
         hash = hash * 31 + ProjectPath.GetHashCode();
         hash = hash * 31 + Debug.GetHashCode();
+        hash = hash * 31 + (LaunchProfile != null ? LaunchProfile.GetHashCode() : 0);
+        hash = hash * 31 + DisableLaunchProfile.GetHashCode();
         hash = hash * 31 + (Args != null ? Args.ContentHashCode() : 0);
         hash = hash * 31 + (Envs != null ? Envs.ContentHashCode() : 0);
         return hash;
@@ -1561,6 +1577,8 @@ namespace AspireSessionHost.Generated
         printer.Print("id = "); Id.PrintEx(printer); printer.Println();
         printer.Print("projectPath = "); ProjectPath.PrintEx(printer); printer.Println();
         printer.Print("debug = "); Debug.PrintEx(printer); printer.Println();
+        printer.Print("launchProfile = "); LaunchProfile.PrintEx(printer); printer.Println();
+        printer.Print("disableLaunchProfile = "); DisableLaunchProfile.PrintEx(printer); printer.Println();
         printer.Print("args = "); Args.PrintEx(printer); printer.Println();
         printer.Print("envs = "); Envs.PrintEx(printer); printer.Println();
       }
@@ -1577,7 +1595,7 @@ namespace AspireSessionHost.Generated
   
   
   /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:109</p>
+  /// <p>Generated from: AspireSessionHostModel.kt:111</p>
   /// </summary>
   public sealed class TraceNode : IPrintable, IEquatable<TraceNode>
   {
@@ -1703,7 +1721,7 @@ namespace AspireSessionHost.Generated
   
   
   /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:122</p>
+  /// <p>Generated from: AspireSessionHostModel.kt:124</p>
   /// </summary>
   public sealed class TraceNodeAttribute : IPrintable, IEquatable<TraceNodeAttribute>
   {
@@ -1797,7 +1815,7 @@ namespace AspireSessionHost.Generated
   
   
   /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:117</p>
+  /// <p>Generated from: AspireSessionHostModel.kt:119</p>
   /// </summary>
   public sealed class TraceNodeChild : IPrintable, IEquatable<TraceNodeChild>
   {

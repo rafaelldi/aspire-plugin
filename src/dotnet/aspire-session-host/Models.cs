@@ -5,7 +5,9 @@ namespace AspireSessionHost;
 [UsedImplicitly]
 internal sealed record Session(
     string ProjectPath,
-    bool Debug,
+    bool? Debug,
+    string? LaunchProfile,
+    bool? DisableLaunchProfile,
     EnvironmentVariable[]? Env,
     string[]? Args
 );

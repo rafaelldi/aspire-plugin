@@ -25,6 +25,7 @@ import com.jetbrains.rider.debugger.DebuggerWorkerProcessHandler
 import com.jetbrains.rider.model.RunnableProject
 import com.jetbrains.rider.model.runnableProjectsModel
 import com.jetbrains.rider.projectView.solution
+import com.jetbrains.rider.run.FormatPreservingCommandLine
 import com.jetbrains.rider.run.TerminalProcessHandler
 import com.jetbrains.rider.run.configurations.project.DotNetProjectConfiguration
 import com.jetbrains.rider.run.configurations.project.DotNetProjectConfigurationType
@@ -33,6 +34,7 @@ import com.jetbrains.rider.run.environment.ExecutableParameterProcessor
 import com.jetbrains.rider.run.environment.ExecutableRunParameters
 import com.jetbrains.rider.run.environment.ProjectProcessOptions
 import com.jetbrains.rider.run.pid
+import com.jetbrains.rider.runtime.RiderDotNetActiveRuntimeHost
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +42,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.launch
 import me.rafaelldi.aspire.generated.SessionModel
+import me.rafaelldi.aspire.manifest.ManifestService
 import me.rafaelldi.aspire.settings.AspireSettings
 import me.rafaelldi.aspire.util.decodeAnsiCommandsToString
 import org.jetbrains.concurrency.await
@@ -96,80 +99,124 @@ class AspireSessionRunner2(private val project: Project, scope: CoroutineScope) 
             return
         }
 
-        val configuration = getOrCreateConfiguration(sessionModel, hostName, openTelemetryPort)
-        if (configuration == null) {
-            LOG.warn("Unable to find or create run configuration for the project ${sessionModel.projectPath}")
+        val runtime = RiderDotNetActiveRuntimeHost.getInstance(project).dotNetCoreRuntime.value
+        if (runtime == null) {
+            LOG.warn("Unable to find .NET runtime")
             return
         }
 
-        val isDebug = isHostDebug || sessionModel.debug
-        val executor =
-            if (!isDebug) DefaultRunExecutor.getRunExecutorInstance()
-            else DefaultDebugExecutor.getDebugExecutorInstance()
+        val commandLine = FormatPreservingCommandLine()
+            .withExePath(runtime.cliExePath)
+            .withParameters("run", "--project", sessionModel.projectPath)
 
-        val environment = ExecutionEnvironmentBuilder
-            .create(project, executor, configuration.configuration)
-            .build()
-
-        val started = CompletableDeferred<Boolean>()
-        withUiContext {
-            ProgramRunnerUtil.executeConfigurationAsync(environment, false, true, object : ProgramRunner.Callback {
-                override fun processStarted(descriptor: RunContentDescriptor?) {
-                    LOG.info("Aspire session process started")
-
-                    descriptor?.apply {
-                        isActivateToolWindowWhenAdded = false
-                        isAutoFocusContent = false
-                    }
-
-                    val processHandler = getProcessHandler(descriptor?.processHandler)
-                    if (processHandler != null) {
-                        val pid = processHandler.pid()
-                        LOG.trace("Aspire session pid: $pid")
-                        if (pid != null) {
-                            sessionEvents.trySend(AspireSessionStarted(sessionId, pid))
-                        }
-
-                        val processAdapter = object : ProcessAdapter() {
-                            override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
-                                val text = decodeAnsiCommandsToString(event.text, outputType)
-                                val isStdErr = outputType == ProcessOutputType.STDERR
-                                sessionEvents.trySend(AspireSessionLogReceived(sessionId, isStdErr, text))
-                            }
-
-                            override fun processTerminated(event: ProcessEvent) {
-                                LOG.info("Aspire session process terminated (pid: $pid)")
-                                sessionEvents.trySend(AspireSessionTerminated(sessionId, event.exitCode))
-                            }
-
-                            override fun processNotStarted() {
-                                LOG.warn("Aspire session process is not started")
-                                sessionEvents.trySend(AspireSessionTerminated(sessionId, -1))
-                            }
-                        }
-
-                        sessionLifetime.onTermination {
-                            if (!processHandler.isProcessTerminating && !processHandler.isProcessTerminated) {
-                                LOG.trace("Killing session process (pid: $pid)")
-                                processHandler.destroyProcess()
-                            }
-                        }
-
-                        processHandler.addProcessListener(processAdapter)
-                    }
-
-                    started.complete(true)
-                }
-
-                override fun processNotStarted() {
-                    started.complete(false)
-                }
-            })
+        if (sessionModel.disableLaunchProfile) {
+            commandLine.withParameters("--no-launch-profile")
+        } else if (sessionModel.launchProfile != null) {
+            commandLine.withParameters("--launch-profile", sessionModel.launchProfile)
         }
 
-        if (!started.await()) {
-            LOG.warn("Unable to start run configuration for the project ${sessionModel.projectPath}")
+        if (sessionModel.args?.isNotEmpty() == true) {
+            commandLine.withParameters("--")
+            commandLine.withParameters(*sessionModel.args)
         }
+
+        if (sessionModel.envs?.isNotEmpty() == true) {
+            commandLine.withEnvironment(sessionModel.envs.associate { it.key to it.value })
+        }
+
+        val handler = KillableProcessHandler(commandLine)
+        handler.addProcessListener(object : ProcessAdapter() {
+            override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
+                val text = decodeAnsiCommandsToString(event.text, outputType)
+                val isStdErr = outputType == ProcessOutputType.STDERR
+                sessionEvents.trySend(AspireSessionLogReceived(sessionId, isStdErr, text))
+            }
+
+            override fun processTerminated(event: ProcessEvent) {
+                //LOG.info("Aspire session process terminated (pid: $pid)")
+                sessionEvents.trySend(AspireSessionTerminated(sessionId, event.exitCode))
+            }
+
+            override fun processNotStarted() {
+                LOG.warn("Aspire session process is not started")
+                sessionEvents.trySend(AspireSessionTerminated(sessionId, -1))
+            }
+        })
+
+//        val configuration = getOrCreateConfiguration(sessionModel, hostName, openTelemetryPort)
+//        if (configuration == null) {
+//            LOG.warn("Unable to find or create run configuration for the project ${sessionModel.projectPath}")
+//            return
+//        }
+//
+//        val isDebug = isHostDebug || sessionModel.debug
+//        val executor =
+//            if (!isDebug) DefaultRunExecutor.getRunExecutorInstance()
+//            else DefaultDebugExecutor.getDebugExecutorInstance()
+//
+//        val environment = ExecutionEnvironmentBuilder
+//            .create(project, executor, configuration.configuration)
+//            .build()
+//
+//        val started = CompletableDeferred<Boolean>()
+//        withUiContext {
+//            ProgramRunnerUtil.executeConfigurationAsync(environment, false, true, object : ProgramRunner.Callback {
+//                override fun processStarted(descriptor: RunContentDescriptor?) {
+//                    LOG.info("Aspire session process started")
+//
+//                    descriptor?.apply {
+//                        isActivateToolWindowWhenAdded = false
+//                        isAutoFocusContent = false
+//                    }
+//
+//                    val processHandler = getProcessHandler(descriptor?.processHandler)
+//                    if (processHandler != null) {
+//                        val pid = processHandler.pid()
+//                        LOG.trace("Aspire session pid: $pid")
+//                        if (pid != null) {
+//                            sessionEvents.trySend(AspireSessionStarted(sessionId, pid))
+//                        }
+//
+//                        val processAdapter = object : ProcessAdapter() {
+//                            override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
+//                                val text = decodeAnsiCommandsToString(event.text, outputType)
+//                                val isStdErr = outputType == ProcessOutputType.STDERR
+//                                sessionEvents.trySend(AspireSessionLogReceived(sessionId, isStdErr, text))
+//                            }
+//
+//                            override fun processTerminated(event: ProcessEvent) {
+//                                LOG.info("Aspire session process terminated (pid: $pid)")
+//                                sessionEvents.trySend(AspireSessionTerminated(sessionId, event.exitCode))
+//                            }
+//
+//                            override fun processNotStarted() {
+//                                LOG.warn("Aspire session process is not started")
+//                                sessionEvents.trySend(AspireSessionTerminated(sessionId, -1))
+//                            }
+//                        }
+//
+//                        sessionLifetime.onTermination {
+//                            if (!processHandler.isProcessTerminating && !processHandler.isProcessTerminated) {
+//                                LOG.trace("Killing session process (pid: $pid)")
+//                                processHandler.destroyProcess()
+//                            }
+//                        }
+//
+//                        processHandler.addProcessListener(processAdapter)
+//                    }
+//
+//                    started.complete(true)
+//                }
+//
+//                override fun processNotStarted() {
+//                    started.complete(false)
+//                }
+//            })
+//        }
+//
+//        if (!started.await()) {
+//            LOG.warn("Unable to start run configuration for the project ${sessionModel.projectPath}")
+//        }
     }
 
     private fun getProcessHandler(processHandler: ProcessHandler?) = when (processHandler) {

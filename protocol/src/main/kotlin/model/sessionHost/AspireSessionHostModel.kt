@@ -39,6 +39,8 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
         field("id", string)
         field("projectPath", string)
         field("debug", bool)
+        field("launchProfile", string.nullable)
+        field("disableLaunchProfile", bool)
         field("args", array(string).nullable)
         field("envs", array(SessionEnvironmentVariable).nullable)
     }

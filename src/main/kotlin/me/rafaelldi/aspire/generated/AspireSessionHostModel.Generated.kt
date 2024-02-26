@@ -69,7 +69,7 @@ class AspireSessionHostModel private constructor(
         
         private val __TraceNodeArraySerializer = TraceNode.array()
         
-        const val serializationHash = 1270678957797202853L
+        const val serializationHash = 6643283119414760680L
         
     }
     override val serializersOwner: ISerializersOwner get() = AspireSessionHostModel
@@ -341,7 +341,7 @@ data class ProcessTerminated (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:83]
+ * #### Generated from [AspireSessionHostModel.kt:85]
  */
 data class ResourceEndpoint (
     val endpointUrl: String,
@@ -405,7 +405,7 @@ data class ResourceEndpoint (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:78]
+ * #### Generated from [AspireSessionHostModel.kt:80]
  */
 data class ResourceEnvironmentVariable (
     val key: String,
@@ -469,7 +469,7 @@ data class ResourceEnvironmentVariable (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:94]
+ * #### Generated from [AspireSessionHostModel.kt:96]
  */
 data class ResourceLog (
     val text: String,
@@ -533,7 +533,7 @@ data class ResourceLog (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:99]
+ * #### Generated from [AspireSessionHostModel.kt:101]
  */
 data class ResourceMetric (
     val serviceName: String,
@@ -627,7 +627,7 @@ data class ResourceMetric (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:53]
+ * #### Generated from [AspireSessionHostModel.kt:55]
  */
 data class ResourceModel (
     val name: String,
@@ -745,7 +745,7 @@ data class ResourceModel (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:72]
+ * #### Generated from [AspireSessionHostModel.kt:74]
  */
 data class ResourceProperty (
     val name: String,
@@ -815,7 +815,7 @@ data class ResourceProperty (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:88]
+ * #### Generated from [AspireSessionHostModel.kt:90]
  */
 data class ResourceService (
     val name: String,
@@ -885,7 +885,7 @@ data class ResourceService (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:55]
+ * #### Generated from [AspireSessionHostModel.kt:57]
  */
 enum class ResourceType {
     Project, 
@@ -901,7 +901,7 @@ enum class ResourceType {
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:46]
+ * #### Generated from [AspireSessionHostModel.kt:48]
  */
 class ResourceWrapper private constructor(
     private val _model: RdOptionalProperty<ResourceModel>,
@@ -1060,6 +1060,8 @@ data class SessionModel (
     val id: String,
     val projectPath: String,
     val debug: Boolean,
+    val launchProfile: String?,
+    val disableLaunchProfile: Boolean,
     val args: Array<String>?,
     val envs: Array<SessionEnvironmentVariable>?
 ) : IPrintable {
@@ -1073,15 +1075,19 @@ data class SessionModel (
             val id = buffer.readString()
             val projectPath = buffer.readString()
             val debug = buffer.readBool()
+            val launchProfile = buffer.readNullable { buffer.readString() }
+            val disableLaunchProfile = buffer.readBool()
             val args = buffer.readNullable { buffer.readArray {buffer.readString()} }
             val envs = buffer.readNullable { buffer.readArray {SessionEnvironmentVariable.read(ctx, buffer)} }
-            return SessionModel(id, projectPath, debug, args, envs)
+            return SessionModel(id, projectPath, debug, launchProfile, disableLaunchProfile, args, envs)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: SessionModel)  {
             buffer.writeString(value.id)
             buffer.writeString(value.projectPath)
             buffer.writeBool(value.debug)
+            buffer.writeNullable(value.launchProfile) { buffer.writeString(it) }
+            buffer.writeBool(value.disableLaunchProfile)
             buffer.writeNullable(value.args) { buffer.writeArray(it) { buffer.writeString(it) } }
             buffer.writeNullable(value.envs) { buffer.writeArray(it) { SessionEnvironmentVariable.write(ctx, buffer, it) } }
         }
@@ -1102,6 +1108,8 @@ data class SessionModel (
         if (id != other.id) return false
         if (projectPath != other.projectPath) return false
         if (debug != other.debug) return false
+        if (launchProfile != other.launchProfile) return false
+        if (disableLaunchProfile != other.disableLaunchProfile) return false
         if (args != other.args) return false
         if (envs != other.envs) return false
         
@@ -1113,6 +1121,8 @@ data class SessionModel (
         __r = __r*31 + id.hashCode()
         __r = __r*31 + projectPath.hashCode()
         __r = __r*31 + debug.hashCode()
+        __r = __r*31 + if (launchProfile != null) launchProfile.hashCode() else 0
+        __r = __r*31 + disableLaunchProfile.hashCode()
         __r = __r*31 + if (args != null) args.contentDeepHashCode() else 0
         __r = __r*31 + if (envs != null) envs.contentDeepHashCode() else 0
         return __r
@@ -1124,6 +1134,8 @@ data class SessionModel (
             print("id = "); id.print(printer); println()
             print("projectPath = "); projectPath.print(printer); println()
             print("debug = "); debug.print(printer); println()
+            print("launchProfile = "); launchProfile.print(printer); println()
+            print("disableLaunchProfile = "); disableLaunchProfile.print(printer); println()
             print("args = "); args.print(printer); println()
             print("envs = "); envs.print(printer); println()
         }
@@ -1136,7 +1148,7 @@ data class SessionModel (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:109]
+ * #### Generated from [AspireSessionHostModel.kt:111]
  */
 data class TraceNode (
     val id: String,
@@ -1218,7 +1230,7 @@ data class TraceNode (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:122]
+ * #### Generated from [AspireSessionHostModel.kt:124]
  */
 data class TraceNodeAttribute (
     val key: String,
@@ -1282,7 +1294,7 @@ data class TraceNodeAttribute (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:117]
+ * #### Generated from [AspireSessionHostModel.kt:119]
  */
 data class TraceNodeChild (
     val id: String,

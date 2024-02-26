@@ -17,7 +17,9 @@ internal sealed class SessionService(Connection connection, ILogger<SessionServi
         var sessionModel = new SessionModel(
             stringId,
             session.ProjectPath,
-            session.Debug,
+            session.Debug ?? false,
+            session.LaunchProfile,
+            session.DisableLaunchProfile ?? false,
             session.Args,
             envs
         );
