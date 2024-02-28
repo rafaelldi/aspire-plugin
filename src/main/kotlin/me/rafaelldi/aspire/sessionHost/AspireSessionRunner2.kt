@@ -25,11 +25,14 @@ import com.intellij.util.execution.ParametersListUtil
 import com.intellij.util.io.systemIndependentPath
 import com.jetbrains.rd.util.lifetime.Lifetime
 import com.jetbrains.rd.util.lifetime.isNotAlive
+import com.jetbrains.rider.CPUKind
 import com.jetbrains.rider.CustomInfo
+import com.jetbrains.rider.PathInfo
+import com.jetbrains.rider.RiderEnvironment.createRunCmdForLauncherInfo
 import com.jetbrains.rider.debugger.*
 import com.jetbrains.rider.debugger.attach.RiderDebuggerWorkerConnector
-import com.jetbrains.rider.debugger.attach.remoting.CPUKind
 import com.jetbrains.rider.debugger.attach.remoting.RemoteDebuggerToolsDownloadHelper
+import com.jetbrains.rider.debugger.targets.DEBUGGER_WORKER_LAUNCHER
 import com.jetbrains.rider.debugger.util.tryGetTargetProcessId
 import com.jetbrains.rider.model.RunnableProject
 import com.jetbrains.rider.model.debuggerWorker.DebuggerWorkerModel
@@ -218,24 +221,23 @@ class AspireSessionRunner2(private val project: Project, scope: CoroutineScope) 
         val frontendToDebuggerPort = NetUtils.findFreePort(67700)
         val backendToDebuggerPort = NetUtils.findFreePort(87700)
 
-        val debuggerToolsDirectory = withBackgroundContext {
-            withBackgroundProgress(project, "Downloading debugger tools…") {
-                RemoteDebuggerToolsDownloadHelper.downloadDebuggerTools(CPUKind.Win64, project)
+        val launcher = DEBUGGER_WORKER_LAUNCHER.getLauncher()
+        val commandLine = createRunCmdForLauncherInfo(
+            launcher,
+            "--mode=server",
+            "--frontend-port=${frontendToDebuggerPort}",
+            "--backend-port=${backendToDebuggerPort}"
+        )
+        val handler = KillableProcessHandler(commandLine)
+        sessionLifetime.onTermination {
+            if (!handler.isProcessTerminating && !handler.isProcessTerminated) {
+                LOG.trace("Killing session process (id: $sessionId)")
+                handler.destroyProcess()
             }
         }
 
-        DebugProfileStateBase.createWorkerCmdForWithCustomRunInfo(
-            ConsoleKind.ExternalConsole,
-            frontendToDebuggerPort,
-            DebuggerWorkerPlatform.X64,
-            CustomInfo(
-                debuggerToolsDirectory
-            ),
-            ExecutableType.Unknown,
-            "--backend-port=$backendToDebuggerPort"
-        )
+        handler.startNotify()
 
-        LOG.info(debuggerToolsDirectory.absolutePath)
 
         val connector = RiderDebuggerWorkerConnector.getInstance(project)
 
@@ -245,7 +247,7 @@ class AspireSessionRunner2(private val project: Project, scope: CoroutineScope) 
             null,
             runtime.cliExePath,
             projectPath.parent.absolutePathString(),
-            "run --project ${projectPath.absolutePathString()} --no-launch-profile --no-build",
+            "run --project ${projectPath.absolutePathString()} --no-launch-profile --no-build -c Debug",
             sessionModel.envs?.map { StringPair(it.key, it.value) }?.toList() ?: emptyList(),
             null,
             true,
@@ -254,8 +256,7 @@ class AspireSessionRunner2(private val project: Project, scope: CoroutineScope) 
         val processHandlerFactory = { workerModel: DebuggerWorkerModel ->
             object : NotifiableDebuggerWorkerProcessHandler(workerModel) {
                 override fun detachIsDefault(): Boolean {
-                    return false
-                }
+                    return false                }
 
                 override fun getProcessInput(): OutputStream? {
                     return null
