@@ -1,5 +1,3 @@
-@file:Suppress("UnstableApiUsage")
-
 package me.rafaelldi.aspire.sessionHost
 
 import com.intellij.execution.configurations.GeneralCommandLine
@@ -8,14 +6,11 @@ import com.intellij.execution.process.ProcessAdapter
 import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessOutputType
 import com.intellij.execution.runners.ExecutionEnvironment
-import com.intellij.execution.util.ExecUtil
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
-import com.intellij.openapi.util.SystemInfo
-import com.intellij.platform.ide.progress.withBackgroundProgress
 import com.intellij.util.io.systemIndependentPath
 import com.jetbrains.rd.util.lifetime.Lifetime
 import com.jetbrains.rd.util.lifetime.isNotAlive
@@ -24,7 +19,6 @@ import com.jetbrains.rider.debugger.NotifiableDebuggerWorkerProcessHandler
 import com.jetbrains.rider.debugger.attach.RiderDebuggerWorkerConnector
 import com.jetbrains.rider.debugger.targets.DEBUGGER_WORKER_LAUNCHER
 import com.jetbrains.rider.model.RdTargetFrameworkId
-import com.jetbrains.rider.model.RdVersionInfo
 import com.jetbrains.rider.model.debuggerWorker.*
 import com.jetbrains.rider.model.runnableProjectsModel
 import com.jetbrains.rider.projectView.solution
@@ -42,9 +36,9 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import me.rafaelldi.aspire.generated.SessionModel
 import me.rafaelldi.aspire.settings.AspireSettings
+import me.rafaelldi.aspire.util.MSBuildPropertyService
 import me.rafaelldi.aspire.util.decodeAnsiCommandsToString
 import java.io.OutputStream
 import java.nio.file.Path
@@ -55,13 +49,9 @@ import kotlin.io.path.nameWithoutExtension
 @Service(Service.Level.PROJECT)
 class AspireSessionRunner2(private val project: Project, scope: CoroutineScope) {
     companion object {
-        fun getInstance(project: Project): AspireSessionRunner2 = project.service()
+        fun getInstance(project: Project) = project.service<AspireSessionRunner2>()
 
         private val LOG = logger<AspireSessionRunner2>()
-
-        private val json by lazy {
-            Json { ignoreUnknownKeys = true }
-        }
 
         private const val OTEL_EXPORTER_OTLP_ENDPOINT = "OTEL_EXPORTER_OTLP_ENDPOINT"
         private fun getOtlpEndpoint(port: Int) = "http://localhost:$port"
@@ -143,73 +133,9 @@ class AspireSessionRunner2(private val project: Project, scope: CoroutineScope) 
             val output = runnableProject.projectOutputs.firstOrNull() ?: return null
             return Path(output.exePath) to output.tfm
         } else {
-            return getExecutableFromMSBuildProperties(sessionProjectPath)
+            val propertyService = MSBuildPropertyService.getInstance(project)
+            return propertyService.getExecutableFromMSBuildProperties(sessionProjectPath)
         }
-    }
-
-    private suspend fun getExecutableFromMSBuildProperties(projectPath: Path): Pair<Path, RdTargetFrameworkId?>? {
-        val runtime = RiderDotNetActiveRuntimeHost.getInstance(project).dotNetCoreRuntime.value
-        if (runtime == null) {
-            LOG.warn("Unable to find dotnet runtime")
-            return null
-        }
-
-        val commandLine = GeneralCommandLine()
-            .withExePath(runtime.cliExePath)
-            .withParameters(
-                listOf(
-                    "build",
-                    projectPath.absolutePathString(),
-                    "-getTargetResult:Build"
-                )
-            )
-
-        return withContext(Dispatchers.IO) {
-            withBackgroundProgress(project, "Building ${projectPath.nameWithoutExtension}") {
-                val output = ExecUtil.execAndGetOutput(commandLine)
-                if (!output.checkSuccess(LOG)) {
-                    return@withBackgroundProgress null
-                }
-
-                val buildTargetResult = json.decodeFromString<BuildTargetResultOutput>(output.stdout)
-                if (!buildTargetResult.targetResults.build.result.equals("Success", true)) {
-                    LOG.warn("Unable to get build target result")
-                    return@withBackgroundProgress null
-                }
-                val buildItem = buildTargetResult.targetResults.build.items.firstOrNull()
-                if (buildItem == null) {
-                    LOG.warn("Unable to get build target result")
-                    return@withBackgroundProgress null
-                }
-
-                val fullPath = Path(buildItem.fullPath)
-                val executablePath =
-                    if (SystemInfo.isWindows) fullPath.resolveSibling(fullPath.nameWithoutExtension + ".exe")
-                    else fullPath.resolveSibling(fullPath.fileName)
-                val targetFrameworkId = getTargetFrameworkId(buildItem.targetFrameworkVersion)
-
-                return@withBackgroundProgress executablePath to targetFrameworkId
-            }
-        }
-    }
-
-    private fun getTargetFrameworkId(targetFrameworkVersion: String): RdTargetFrameworkId {
-        val versionParts = targetFrameworkVersion.split('.').map { it.toInt() }
-        val versionInfo = when (versionParts.size) {
-            1 -> {
-                RdVersionInfo(versionParts[0], 0, 0)
-            }
-
-            2 -> {
-                RdVersionInfo(versionParts[0], versionParts[1], 0)
-            }
-
-            else -> {
-                RdVersionInfo(versionParts[0], versionParts[1], versionParts[2])
-            }
-        }
-
-        return RdTargetFrameworkId(versionInfo, ".NETCoreApp", targetFrameworkVersion, true, false)
     }
 
     private fun startRunSession(

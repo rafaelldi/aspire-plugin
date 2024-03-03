@@ -1,4 +1,4 @@
-package me.rafaelldi.aspire.sessionHost
+package me.rafaelldi.aspire.util
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
