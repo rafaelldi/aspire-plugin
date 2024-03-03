@@ -1,63 +1,63 @@
 package me.rafaelldi.aspire.sessionHost
 
-import com.intellij.execution.CantRunException
-import com.intellij.execution.ProgramRunnerUtil
-import com.intellij.execution.RunManager
-import com.intellij.execution.RunnerAndConfigurationSettings
-import com.intellij.execution.configurations.ConfigurationTypeUtil
-import com.intellij.execution.executors.DefaultDebugExecutor
-import com.intellij.execution.executors.DefaultRunExecutor
-import com.intellij.execution.process.*
-import com.intellij.execution.runners.ExecutionEnvironmentBuilder
-import com.intellij.execution.runners.ProgramRunner
-import com.intellij.execution.ui.RunContentDescriptor
+import com.intellij.execution.configurations.GeneralCommandLine
+import com.intellij.execution.process.KillableProcessHandler
+import com.intellij.execution.process.ProcessAdapter
+import com.intellij.execution.process.ProcessEvent
+import com.intellij.execution.process.ProcessOutputType
+import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.rd.util.withUiContext
 import com.intellij.openapi.util.Key
-import com.intellij.util.execution.ParametersListUtil
 import com.intellij.util.io.systemIndependentPath
 import com.jetbrains.rd.util.lifetime.Lifetime
 import com.jetbrains.rd.util.lifetime.isNotAlive
-import com.jetbrains.rider.debugger.DebuggerWorkerProcessHandler
-import com.jetbrains.rider.model.RunnableProject
+import com.jetbrains.rider.RiderEnvironment.createRunCmdForLauncherInfo
+import com.jetbrains.rider.debugger.NotifiableDebuggerWorkerProcessHandler
+import com.jetbrains.rider.debugger.attach.RiderDebuggerWorkerConnector
+import com.jetbrains.rider.debugger.targets.DEBUGGER_WORKER_LAUNCHER
+import com.jetbrains.rider.model.RdTargetFrameworkId
+import com.jetbrains.rider.model.debuggerWorker.*
 import com.jetbrains.rider.model.runnableProjectsModel
 import com.jetbrains.rider.projectView.solution
-import com.jetbrains.rider.run.TerminalProcessHandler
-import com.jetbrains.rider.run.configurations.project.DotNetProjectConfiguration
-import com.jetbrains.rider.run.configurations.project.DotNetProjectConfigurationType
-import com.jetbrains.rider.run.environment.ExecutableParameterProcessingResult
-import com.jetbrains.rider.run.environment.ExecutableParameterProcessor
-import com.jetbrains.rider.run.environment.ExecutableRunParameters
-import com.jetbrains.rider.run.environment.ProjectProcessOptions
+import com.jetbrains.rider.run.ConsoleKind
+import com.jetbrains.rider.run.FormatPreservingCommandLine
+import com.jetbrains.rider.run.configurations.RunnableProjectKinds
+import com.jetbrains.rider.run.createConsole
 import com.jetbrains.rider.run.pid
-import kotlinx.coroutines.CompletableDeferred
+import com.jetbrains.rider.runtime.RiderDotNetActiveRuntimeHost
+import com.jetbrains.rider.util.NetUtils
+import icons.RiderIcons
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.rafaelldi.aspire.generated.SessionModel
 import me.rafaelldi.aspire.settings.AspireSettings
+import me.rafaelldi.aspire.util.MSBuildPropertyService
 import me.rafaelldi.aspire.util.decodeAnsiCommandsToString
-import org.jetbrains.concurrency.await
-import java.io.File
+import java.io.OutputStream
+import java.nio.file.Path
 import kotlin.io.path.Path
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.nameWithoutExtension
 
 @Service(Service.Level.PROJECT)
 class AspireSessionRunner(private val project: Project, scope: CoroutineScope) {
     companion object {
-        fun getInstance(project: Project): AspireSessionRunner = project.service()
+        fun getInstance(project: Project) = project.service<AspireSessionRunner>()
 
         private val LOG = logger<AspireSessionRunner>()
 
-        private const val ASPIRE_SUFFIX = "Aspire"
         private const val OTEL_EXPORTER_OTLP_ENDPOINT = "OTEL_EXPORTER_OTLP_ENDPOINT"
+        private fun getOtlpEndpoint(port: Int) = "http://localhost:$port"
     }
 
-    private val commandChannel = Channel<RunSessionCommand>(Channel.UNLIMITED)
+    private val commandChannel = Channel<AspireSessionRunner.RunSessionCommand>(Channel.UNLIMITED)
 
     data class RunSessionCommand(
         val sessionId: String,
@@ -77,7 +77,6 @@ class AspireSessionRunner(private val project: Project, scope: CoroutineScope) {
                     it.sessionModel,
                     it.sessionLifetime,
                     it.sessionEvents,
-                    it.hostName,
                     it.isHostDebug,
                     it.openTelemetryPort
                 )
@@ -85,7 +84,7 @@ class AspireSessionRunner(private val project: Project, scope: CoroutineScope) {
         }
     }
 
-    fun runSession(command: RunSessionCommand) {
+    fun runSession(command: AspireSessionRunner.RunSessionCommand) {
         LOG.trace("Sending run session command $command")
         commandChannel.trySend(command)
     }
@@ -95,7 +94,6 @@ class AspireSessionRunner(private val project: Project, scope: CoroutineScope) {
         sessionModel: SessionModel,
         sessionLifetime: Lifetime,
         sessionEvents: Channel<AspireSessionEvent>,
-        hostName: String,
         isHostDebug: Boolean,
         openTelemetryPort: Int
     ) {
@@ -106,226 +104,217 @@ class AspireSessionRunner(private val project: Project, scope: CoroutineScope) {
             return
         }
 
-        val configuration = getOrCreateConfiguration(sessionModel, hostName, openTelemetryPort)
-        if (configuration == null) {
-            LOG.warn("Unable to find or create run configuration for the project ${sessionModel.projectPath}")
+        val executable = getExecutable(sessionModel)
+        if (executable == null) {
+            LOG.warn("Unable to find executable for $sessionId (project: ${sessionModel.projectPath})")
             return
         }
 
         val isDebug = isHostDebug || sessionModel.debug
-        val executor =
-            if (!isDebug) DefaultRunExecutor.getRunExecutorInstance()
-            else DefaultDebugExecutor.getDebugExecutorInstance()
-
-        val environment = ExecutionEnvironmentBuilder
-            .create(project, executor, configuration.configuration)
-            .build()
-
-        val started = CompletableDeferred<Boolean>()
-        withUiContext {
-            ProgramRunnerUtil.executeConfigurationAsync(environment, false, true, object : ProgramRunner.Callback {
-                override fun processStarted(descriptor: RunContentDescriptor?) {
-                    LOG.info("Aspire session process started")
-
-                    descriptor?.apply {
-                        isActivateToolWindowWhenAdded = false
-                        isAutoFocusContent = false
-                    }
-
-                    val processHandler = getProcessHandler(descriptor?.processHandler)
-                    if (processHandler != null) {
-                        val pid = processHandler.pid()
-                        LOG.trace("Aspire session pid: $pid")
-                        if (pid != null) {
-                            sessionEvents.trySend(AspireSessionStarted(sessionId, pid))
-                        }
-
-                        val processAdapter = object : ProcessAdapter() {
-                            override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
-                                val text = decodeAnsiCommandsToString(event.text, outputType)
-                                val isStdErr = outputType == ProcessOutputType.STDERR
-                                sessionEvents.trySend(AspireSessionLogReceived(sessionId, isStdErr, text))
-                            }
-
-                            override fun processTerminated(event: ProcessEvent) {
-                                LOG.info("Aspire session process terminated (pid: $pid)")
-                                sessionEvents.trySend(AspireSessionTerminated(sessionId, event.exitCode))
-                            }
-
-                            override fun processNotStarted() {
-                                LOG.warn("Aspire session process is not started")
-                                sessionEvents.trySend(AspireSessionTerminated(sessionId, -1))
-                            }
-                        }
-
-                        sessionLifetime.onTermination {
-                            if (!processHandler.isProcessTerminating && !processHandler.isProcessTerminated) {
-                                LOG.trace("Killing session process (pid: $pid)")
-                                processHandler.destroyProcess()
-                            }
-                        }
-
-                        processHandler.addProcessListener(processAdapter)
-                    }
-
-                    started.complete(true)
-                }
-
-                override fun processNotStarted() {
-                    started.complete(false)
-                }
-            })
-        }
-
-        if (!started.await()) {
-            LOG.warn("Unable to start run configuration for the project ${sessionModel.projectPath}")
-        }
-    }
-
-    private fun getProcessHandler(processHandler: ProcessHandler?) = when (processHandler) {
-        is TerminalProcessHandler -> processHandler
-        is DebuggerWorkerProcessHandler -> processHandler.debuggerWorkerRealHandler
-        else -> {
-            LOG.warn("Unknown ProcessHandler: $processHandler")
-            null
-        }
-    }
-
-    private suspend fun getOrCreateConfiguration(
-        session: SessionModel,
-        hostName: String,
-        openTelemetryPort: Int
-    ): RunnerAndConfigurationSettings? {
-        val projects = project.solution.runnableProjectsModel.projects.valueOrNull
-        if (projects == null) {
-            LOG.warn("Runnable projects model doesn't contain projects")
-            return null
-        }
-
-        val projectPath = Path(session.projectPath).systemIndependentPath
-        LOG.trace("Session project path: $projectPath")
-        val runnableProject = projects.firstOrNull {
-            DotNetProjectConfigurationType.isTypeApplicable(it.kind) && it.projectFilePath == projectPath
-        }
-        if (runnableProject == null) {
-            LOG.warn("Unable to find a specified runnable project")
-            return null
-        }
-
-        val runManager = RunManager.getInstance(project)
-        val configurationType = ConfigurationTypeUtil.findConfigurationType(DotNetProjectConfigurationType::class.java)
-        val configurationName = "${runnableProject.name}-$ASPIRE_SUFFIX"
-        LOG.trace("Session run configuration name: $configurationName")
-        val existingConfiguration = runManager.allSettings.firstOrNull {
-            it.type.id == configurationType.id && it.name == configurationName && it.folderName == hostName
-        }
-
-        if (existingConfiguration != null) {
-            LOG.info("Found existing run configuration ${existingConfiguration.name}")
-            return updateConfiguration(
-                existingConfiguration,
-                runnableProject,
-                session,
+        if (isDebug) {
+            startDebugSession(
+                sessionId,
+                executable,
+                sessionModel,
+                sessionLifetime,
+                sessionEvents,
                 openTelemetryPort
             )
         } else {
-            LOG.info("Creating a new run configuration $configurationName")
-            return createConfiguration(
-                configurationType,
-                configurationName,
-                runManager,
-                runnableProject,
-                session,
-                hostName,
+            startRunSession(
+                sessionId,
+                executable.first,
+                sessionModel,
+                sessionLifetime,
+                sessionEvents,
                 openTelemetryPort
             )
         }
     }
 
-    private suspend fun updateConfiguration(
-        existingConfiguration: RunnerAndConfigurationSettings,
-        runnableProject: RunnableProject,
-        session: SessionModel,
+    private suspend fun getExecutable(sessionModel: SessionModel): Pair<Path, RdTargetFrameworkId?>? {
+        val runnableProjects = project.solution.runnableProjectsModel.projects.valueOrNull ?: return null
+        val sessionProjectPath = Path(sessionModel.projectPath)
+        val sessionProjectPathString = sessionProjectPath.systemIndependentPath
+        val runnableProject = runnableProjects.singleOrNull {
+            it.projectFilePath == sessionProjectPathString && it.kind == RunnableProjectKinds.DotNetCore
+        }
+        if (runnableProject != null) {
+            val output = runnableProject.projectOutputs.firstOrNull() ?: return null
+            return Path(output.exePath) to output.tfm
+        } else {
+            val propertyService = MSBuildPropertyService.getInstance(project)
+            return propertyService.getExecutableFromMSBuildProperties(sessionProjectPath)
+        }
+    }
+
+    private fun startRunSession(
+        sessionId: String,
+        executablePath: Path,
+        sessionModel: SessionModel,
+        sessionLifetime: Lifetime,
+        sessionEvents: Channel<AspireSessionEvent>,
         openTelemetryPort: Int
-    ): RunnerAndConfigurationSettings {
-        val runParams = getRunParameters(runnableProject, session, openTelemetryPort)
-        existingConfiguration.apply {
-            (configuration as DotNetProjectConfiguration).apply {
-                parameters.projectFilePath = runnableProject.projectFilePath
-                parameters.projectKind = runnableProject.kind
-                parameters.programParameters = runParams.commandLineArgumentString ?: ParametersListUtil.join(
-                    session.args?.toList() ?: emptyList()
-                )
-                parameters.envs = runParams.environmentVariables
+    ) {
+        val commandLine = getRunningCommandLine(executablePath, sessionModel, openTelemetryPort)
+
+        val handler = KillableProcessHandler(commandLine)
+        handler.addProcessListener(object : ProcessAdapter() {
+            override fun startNotified(event: ProcessEvent) {
+                LOG.info("Aspire session process started (id: $sessionId)")
+                val pid = when (event.processHandler) {
+                    is KillableProcessHandler -> event.processHandler.pid()
+                    else -> null
+                }
+                if (pid == null) {
+                    LOG.warn("Unable to determine process id for the session $sessionId")
+                    sessionEvents.trySend(AspireSessionTerminated(sessionId, -1))
+                } else {
+                    sessionEvents.trySend(AspireSessionStarted(sessionId, pid))
+                }
+            }
+
+            override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
+                val text = decodeAnsiCommandsToString(event.text, outputType)
+                val isStdErr = outputType == ProcessOutputType.STDERR
+                sessionEvents.trySend(AspireSessionLogReceived(sessionId, isStdErr, text))
+            }
+
+            override fun processTerminated(event: ProcessEvent) {
+                LOG.info("Aspire session process terminated (id: $sessionId)")
+                sessionEvents.trySend(AspireSessionTerminated(sessionId, event.exitCode))
+            }
+
+            override fun processNotStarted() {
+                LOG.warn("Aspire session process is not started")
+                sessionEvents.trySend(AspireSessionTerminated(sessionId, -1))
+            }
+        })
+
+        sessionLifetime.onTermination {
+            if (!handler.isProcessTerminating && !handler.isProcessTerminated) {
+                LOG.trace("Killing session process (id: $sessionId)")
+                handler.destroyProcess()
             }
         }
 
-        LOG.trace("Updated a run configuration $existingConfiguration")
-
-        return existingConfiguration
+        handler.startNotify()
     }
 
-    private suspend fun createConfiguration(
-        configurationType: DotNetProjectConfigurationType,
-        configurationName: String,
-        runManager: RunManager,
-        runnableProject: RunnableProject,
-        session: SessionModel,
-        hostName: String,
+    private fun getRunningCommandLine(
+        executablePath: Path,
+        sessionModel: SessionModel,
         openTelemetryPort: Int
-    ): RunnerAndConfigurationSettings {
-        val runParams = getRunParameters(runnableProject, session, openTelemetryPort)
-        val factory = configurationType.factory
-        val defaultConfiguration =
-            runManager.createConfiguration(configurationName, factory).apply {
-                (configuration as DotNetProjectConfiguration).apply {
-                    parameters.projectFilePath = runnableProject.projectFilePath
-                    parameters.projectKind = runnableProject.kind
-                    parameters.programParameters = runParams.commandLineArgumentString ?: ParametersListUtil.join(
-                        session.args?.toList() ?: emptyList()
-                    )
-                    parameters.envs = runParams.environmentVariables
-                }
-                isActivateToolWindowBeforeRun = false
-                isFocusToolWindowBeforeRun = false
-                folderName = hostName
-            }
+    ): GeneralCommandLine {
+        val commandLine = FormatPreservingCommandLine()
+            .withExePath(executablePath.absolutePathString())
+            .withWorkDirectory(executablePath.parent.absolutePathString())
 
-        runManager.addConfiguration(defaultConfiguration)
+        if (sessionModel.args?.isNotEmpty() == true) {
+            commandLine.withParameters(*sessionModel.args)
+        }
 
-        LOG.trace("Created a run configuration $defaultConfiguration")
+        if (sessionModel.envs?.isNotEmpty() == true) {
+            commandLine.withEnvironment(sessionModel.envs.associate { it.key to it.value })
+        }
 
-        return defaultConfiguration
+        if (AspireSettings.getInstance().collectTelemetry) {
+            commandLine.withEnvironment(OTEL_EXPORTER_OTLP_ENDPOINT, getOtlpEndpoint(openTelemetryPort))
+        }
+
+        return commandLine
     }
 
-    private suspend fun getRunParameters(
-        runnableProject: RunnableProject,
-        session: SessionModel,
+    private suspend fun startDebugSession(
+        sessionId: String,
+        executable: Pair<Path, RdTargetFrameworkId?>,
+        sessionModel: SessionModel,
+        sessionLifetime: Lifetime,
+        sessionEvents: Channel<AspireSessionEvent>,
         openTelemetryPort: Int
-    ): ExecutableParameterProcessingResult {
-        val projectOutput = runnableProject.projectOutputs.firstOrNull()
-            ?: throw CantRunException("Unable to find project output")
-        val processOptions = ProjectProcessOptions(
-            File(runnableProject.projectFilePath),
-            File(projectOutput.workingDirectory)
-        )
-        val envs = session.envs?.associate { it.key to it.value }?.toMutableMap() ?: mutableMapOf()
-        if (AspireSettings.getInstance().collectTelemetry)
-            envs[OTEL_EXPORTER_OTLP_ENDPOINT] = "http://localhost:$openTelemetryPort"
-        val runParameters = ExecutableRunParameters(
-            projectOutput.exePath,
-            projectOutput.workingDirectory,
-            ParametersListUtil.join(projectOutput.defaultArguments),
-            envs,
+    ) {
+        val frontendToDebuggerPort = NetUtils.findFreePort(67700)
+        val backendToDebuggerPort = NetUtils.findFreePort(87700)
+
+        startDebuggerWorker(sessionId, frontendToDebuggerPort, backendToDebuggerPort, sessionLifetime)
+
+        val runtime = RiderDotNetActiveRuntimeHost.getInstance(project).dotNetCoreRuntime.value
+        if (runtime == null) {
+            LOG.warn("Unable to find dotnet runtime")
+            return
+        }
+
+        val (executablePath, projectTfm) = executable
+        val args = sessionModel.args?.joinToString(" ") ?: ""
+        val envs = sessionModel.envs?.associate { it.key to it.value }?.toMutableMap() ?: mutableMapOf()
+        if (AspireSettings.getInstance().collectTelemetry) {
+            envs[OTEL_EXPORTER_OTLP_ENDPOINT] = getOtlpEndpoint(openTelemetryPort)
+        }
+
+        val startInfo = DotNetCoreExeStartInfo(
+            DotNetCoreInfo(runtime.cliExePath),
+            projectTfm?.let { EncInfo(it) },
+            executablePath.absolutePathString(),
+            executablePath.parent.absolutePathString(),
+            args,
+            envs.map { StringPair(it.key, it.value) }.toList(),
+            null,
             true,
-            projectOutput.tfm
+            false
         )
+        val processHandlerFactory = { workerModel: DebuggerWorkerModel ->
+            object : NotifiableDebuggerWorkerProcessHandler(workerModel) {
+                override fun detachIsDefault(): Boolean {
+                    return true
+                }
 
-        val params = ExecutableParameterProcessor
-            .getInstance(project)
-            .processEnvironment(runParameters, processOptions)
-            .await()
+                override fun getProcessInput(): OutputStream? {
+                    return null
+                }
+            }
+        }
+        val executionConsoleFactory = { handler: NotifiableDebuggerWorkerProcessHandler ->
+            createConsole(ConsoleKind.Normal, handler, project)
+        }
 
-        return params
+        val projectPath = Path(sessionModel.projectPath)
+        val connector = RiderDebuggerWorkerConnector.getInstance(project)
+        withContext(Dispatchers.Main) {
+            connector.startDebugSession(
+                frontendToDebuggerPort,
+                backendToDebuggerPort,
+                ExecutionEnvironment.getNextUnusedExecutionId(),
+                projectPath.nameWithoutExtension,
+                RiderIcons.RunConfigurations.DotNetProject,
+                startInfo,
+                processHandlerFactory,
+                executionConsoleFactory,
+                null,
+                sessionLifetime
+            )
+        }
+    }
+
+    private fun startDebuggerWorker(
+        sessionId: String,
+        frontendToDebuggerPort: Int,
+        backendToDebuggerPort: Int,
+        sessionLifetime: Lifetime
+    ) {
+        val launcher = DEBUGGER_WORKER_LAUNCHER.getLauncher()
+        val commandLine = createRunCmdForLauncherInfo(
+            launcher,
+            "--mode=server",
+            "--frontend-port=${frontendToDebuggerPort}",
+            "--backend-port=${backendToDebuggerPort}"
+        )
+        val handler = KillableProcessHandler(commandLine)
+        sessionLifetime.onTermination {
+            if (!handler.isProcessTerminating && !handler.isProcessTerminated) {
+                LOG.trace("Killing session process (id: $sessionId)")
+                handler.killProcess()
+            }
+        }
+        handler.startNotify()
     }
 }

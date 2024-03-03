@@ -181,7 +181,7 @@ class AspireSessionHostManager(private val project: Project) {
         )
 
         LOG.trace("Starting new session with runner (command $command)")
-        val runner = AspireSessionRunner2.getInstance(project)
+        val runner = AspireSessionRunner.getInstance(project)
         runner.runSession(command)
     }
 
