@@ -57,7 +57,7 @@ class AspireSessionRunner(private val project: Project, scope: CoroutineScope) {
         private fun getOtlpEndpoint(port: Int) = "http://localhost:$port"
     }
 
-    private val commandChannel = Channel<AspireSessionRunner.RunSessionCommand>(Channel.UNLIMITED)
+    private val commandChannel = Channel<RunSessionCommand>(Channel.UNLIMITED)
 
     data class RunSessionCommand(
         val sessionId: String,
@@ -84,7 +84,7 @@ class AspireSessionRunner(private val project: Project, scope: CoroutineScope) {
         }
     }
 
-    fun runSession(command: AspireSessionRunner.RunSessionCommand) {
+    fun runSession(command: RunSessionCommand) {
         LOG.trace("Sending run session command $command")
         commandChannel.trySend(command)
     }
