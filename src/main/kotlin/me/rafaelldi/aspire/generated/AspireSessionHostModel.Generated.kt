@@ -19,7 +19,8 @@ import kotlin.jvm.JvmStatic
  * #### Generated from [AspireSessionHostModel.kt:16]
  */
 class AspireSessionHostModel private constructor(
-    private val _sessions: RdMap<String, SessionModel>,
+    private val _upsertSession: RdCall<SessionModel, SessionUpsertResult?>,
+    private val _deleteSession: RdCall<String, Boolean>,
     private val _processStarted: RdSignal<ProcessStarted>,
     private val _processTerminated: RdSignal<ProcessTerminated>,
     private val _logReceived: RdSignal<LogReceived>,
@@ -31,23 +32,25 @@ class AspireSessionHostModel private constructor(
     companion object : ISerializersOwner {
         
         override fun registerSerializersCore(serializers: ISerializers)  {
-            serializers.register(ProcessStarted)
-            serializers.register(ProcessTerminated)
-            serializers.register(LogReceived)
-            serializers.register(SessionEnvironmentVariable)
-            serializers.register(SessionModel)
-            serializers.register(ResourceWrapper)
-            serializers.register(ResourceModel)
-            serializers.register(ResourceProperty)
-            serializers.register(ResourceEnvironmentVariable)
-            serializers.register(ResourceEndpoint)
-            serializers.register(ResourceService)
-            serializers.register(ResourceLog)
-            serializers.register(ResourceMetric)
-            serializers.register(TraceNode)
-            serializers.register(TraceNodeChild)
-            serializers.register(TraceNodeAttribute)
-            serializers.register(ResourceType.marshaller)
+            val classLoader = javaClass.classLoader
+            serializers.register(LazyCompanionMarshaller(RdId(-8012683471335252475), classLoader, "me.rafaelldi.aspire.generated.ProcessStarted"))
+            serializers.register(LazyCompanionMarshaller(RdId(-4984966637681634785), classLoader, "me.rafaelldi.aspire.generated.ProcessTerminated"))
+            serializers.register(LazyCompanionMarshaller(RdId(548077805281958706), classLoader, "me.rafaelldi.aspire.generated.LogReceived"))
+            serializers.register(LazyCompanionMarshaller(RdId(-5369615389742325332), classLoader, "me.rafaelldi.aspire.generated.SessionEnvironmentVariable"))
+            serializers.register(LazyCompanionMarshaller(RdId(-1286323512761547290), classLoader, "me.rafaelldi.aspire.generated.SessionModel"))
+            serializers.register(LazyCompanionMarshaller(RdId(-1200535963048262449), classLoader, "me.rafaelldi.aspire.generated.SessionUpsertResult"))
+            serializers.register(LazyCompanionMarshaller(RdId(-7695483574898099182), classLoader, "me.rafaelldi.aspire.generated.ResourceWrapper"))
+            serializers.register(LazyCompanionMarshaller(RdId(-3770298982342277528), classLoader, "me.rafaelldi.aspire.generated.ResourceModel"))
+            serializers.register(LazyCompanionMarshaller(RdId(1247681944195290678), classLoader, "me.rafaelldi.aspire.generated.ResourceProperty"))
+            serializers.register(LazyCompanionMarshaller(RdId(-1423436662766610770), classLoader, "me.rafaelldi.aspire.generated.ResourceEnvironmentVariable"))
+            serializers.register(LazyCompanionMarshaller(RdId(1247681637691889142), classLoader, "me.rafaelldi.aspire.generated.ResourceEndpoint"))
+            serializers.register(LazyCompanionMarshaller(RdId(-7695483578804421068), classLoader, "me.rafaelldi.aspire.generated.ResourceService"))
+            serializers.register(LazyCompanionMarshaller(RdId(552742225967985219), classLoader, "me.rafaelldi.aspire.generated.ResourceLog"))
+            serializers.register(LazyCompanionMarshaller(RdId(-6198804010362039727), classLoader, "me.rafaelldi.aspire.generated.ResourceMetric"))
+            serializers.register(LazyCompanionMarshaller(RdId(577221124058644), classLoader, "me.rafaelldi.aspire.generated.TraceNode"))
+            serializers.register(LazyCompanionMarshaller(RdId(-2931968979041238168), classLoader, "me.rafaelldi.aspire.generated.TraceNodeChild"))
+            serializers.register(LazyCompanionMarshaller(RdId(7298853094950171368), classLoader, "me.rafaelldi.aspire.generated.TraceNodeAttribute"))
+            serializers.register(LazyCompanionMarshaller(RdId(-1311735068701761509), classLoader, "me.rafaelldi.aspire.generated.ResourceType"))
         }
         
         
@@ -67,16 +70,18 @@ class AspireSessionHostModel private constructor(
             return AspireSessionHostModel()
         }
         
+        private val __SessionUpsertResultNullableSerializer = SessionUpsertResult.nullable()
         private val __TraceNodeArraySerializer = TraceNode.array()
         
-        const val serializationHash = 6643283119414760680L
+        const val serializationHash = 9195607196802562937L
         
     }
     override val serializersOwner: ISerializersOwner get() = AspireSessionHostModel
     override val serializationHash: Long get() = AspireSessionHostModel.serializationHash
     
     //fields
-    val sessions: IMutableViewableMap<String, SessionModel> get() = _sessions
+    val upsertSession: IRdEndpoint<SessionModel, SessionUpsertResult?> get() = _upsertSession
+    val deleteSession: IRdEndpoint<String, Boolean> get() = _deleteSession
     val processStarted: ISignal<ProcessStarted> get() = _processStarted
     val processTerminated: ISignal<ProcessTerminated> get() = _processTerminated
     val logReceived: ISignal<LogReceived> get() = _logReceived
@@ -85,11 +90,8 @@ class AspireSessionHostModel private constructor(
     //methods
     //initializer
     init {
-        _sessions.optimizeNested = true
-    }
-    
-    init {
-        bindableChildren.add("sessions" to _sessions)
+        bindableChildren.add("upsertSession" to _upsertSession)
+        bindableChildren.add("deleteSession" to _deleteSession)
         bindableChildren.add("processStarted" to _processStarted)
         bindableChildren.add("processTerminated" to _processTerminated)
         bindableChildren.add("logReceived" to _logReceived)
@@ -100,7 +102,8 @@ class AspireSessionHostModel private constructor(
     //secondary constructor
     private constructor(
     ) : this(
-        RdMap<String, SessionModel>(FrameworkMarshallers.String, SessionModel),
+        RdCall<SessionModel, SessionUpsertResult?>(SessionModel, __SessionUpsertResultNullableSerializer),
+        RdCall<String, Boolean>(FrameworkMarshallers.String, FrameworkMarshallers.Bool),
         RdSignal<ProcessStarted>(ProcessStarted),
         RdSignal<ProcessTerminated>(ProcessTerminated),
         RdSignal<LogReceived>(LogReceived),
@@ -114,7 +117,8 @@ class AspireSessionHostModel private constructor(
     override fun print(printer: PrettyPrinter)  {
         printer.println("AspireSessionHostModel (")
         printer.indent {
-            print("sessions = "); _sessions.print(printer); println()
+            print("upsertSession = "); _upsertSession.print(printer); println()
+            print("deleteSession = "); _deleteSession.print(printer); println()
             print("processStarted = "); _processStarted.print(printer); println()
             print("processTerminated = "); _processTerminated.print(printer); println()
             print("logReceived = "); _logReceived.print(printer); println()
@@ -126,7 +130,8 @@ class AspireSessionHostModel private constructor(
     //deepClone
     override fun deepClone(): AspireSessionHostModel   {
         return AspireSessionHostModel(
-            _sessions.deepClonePolymorphic(),
+            _upsertSession.deepClonePolymorphic(),
+            _deleteSession.deepClonePolymorphic(),
             _processStarted.deepClonePolymorphic(),
             _processTerminated.deepClonePolymorphic(),
             _logReceived.deepClonePolymorphic(),
@@ -154,6 +159,7 @@ data class LogReceived (
     
     companion object : IMarshaller<LogReceived> {
         override val _type: KClass<LogReceived> = LogReceived::class
+        override val id: RdId get() = RdId(548077805281958706)
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): LogReceived  {
@@ -223,6 +229,7 @@ data class ProcessStarted (
     
     companion object : IMarshaller<ProcessStarted> {
         override val _type: KClass<ProcessStarted> = ProcessStarted::class
+        override val id: RdId get() = RdId(-8012683471335252475)
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ProcessStarted  {
@@ -287,6 +294,7 @@ data class ProcessTerminated (
     
     companion object : IMarshaller<ProcessTerminated> {
         override val _type: KClass<ProcessTerminated> = ProcessTerminated::class
+        override val id: RdId get() = RdId(-4984966637681634785)
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ProcessTerminated  {
@@ -341,7 +349,7 @@ data class ProcessTerminated (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:85]
+ * #### Generated from [AspireSessionHostModel.kt:88]
  */
 data class ResourceEndpoint (
     val endpointUrl: String,
@@ -351,6 +359,7 @@ data class ResourceEndpoint (
     
     companion object : IMarshaller<ResourceEndpoint> {
         override val _type: KClass<ResourceEndpoint> = ResourceEndpoint::class
+        override val id: RdId get() = RdId(1247681637691889142)
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ResourceEndpoint  {
@@ -405,7 +414,7 @@ data class ResourceEndpoint (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:80]
+ * #### Generated from [AspireSessionHostModel.kt:83]
  */
 data class ResourceEnvironmentVariable (
     val key: String,
@@ -415,6 +424,7 @@ data class ResourceEnvironmentVariable (
     
     companion object : IMarshaller<ResourceEnvironmentVariable> {
         override val _type: KClass<ResourceEnvironmentVariable> = ResourceEnvironmentVariable::class
+        override val id: RdId get() = RdId(-1423436662766610770)
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ResourceEnvironmentVariable  {
@@ -469,7 +479,7 @@ data class ResourceEnvironmentVariable (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:96]
+ * #### Generated from [AspireSessionHostModel.kt:99]
  */
 data class ResourceLog (
     val text: String,
@@ -479,6 +489,7 @@ data class ResourceLog (
     
     companion object : IMarshaller<ResourceLog> {
         override val _type: KClass<ResourceLog> = ResourceLog::class
+        override val id: RdId get() = RdId(552742225967985219)
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ResourceLog  {
@@ -533,7 +544,7 @@ data class ResourceLog (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:101]
+ * #### Generated from [AspireSessionHostModel.kt:104]
  */
 data class ResourceMetric (
     val serviceName: String,
@@ -548,6 +559,7 @@ data class ResourceMetric (
     
     companion object : IMarshaller<ResourceMetric> {
         override val _type: KClass<ResourceMetric> = ResourceMetric::class
+        override val id: RdId get() = RdId(-6198804010362039727)
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ResourceMetric  {
@@ -627,7 +639,7 @@ data class ResourceMetric (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:55]
+ * #### Generated from [AspireSessionHostModel.kt:58]
  */
 data class ResourceModel (
     val name: String,
@@ -646,6 +658,7 @@ data class ResourceModel (
     
     companion object : IMarshaller<ResourceModel> {
         override val _type: KClass<ResourceModel> = ResourceModel::class
+        override val id: RdId get() = RdId(-3770298982342277528)
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ResourceModel  {
@@ -745,7 +758,7 @@ data class ResourceModel (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:74]
+ * #### Generated from [AspireSessionHostModel.kt:77]
  */
 data class ResourceProperty (
     val name: String,
@@ -756,6 +769,7 @@ data class ResourceProperty (
     
     companion object : IMarshaller<ResourceProperty> {
         override val _type: KClass<ResourceProperty> = ResourceProperty::class
+        override val id: RdId get() = RdId(1247681944195290678)
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ResourceProperty  {
@@ -815,7 +829,7 @@ data class ResourceProperty (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:90]
+ * #### Generated from [AspireSessionHostModel.kt:93]
  */
 data class ResourceService (
     val name: String,
@@ -826,6 +840,7 @@ data class ResourceService (
     
     companion object : IMarshaller<ResourceService> {
         override val _type: KClass<ResourceService> = ResourceService::class
+        override val id: RdId get() = RdId(-7695483578804421068)
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ResourceService  {
@@ -885,7 +900,7 @@ data class ResourceService (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:57]
+ * #### Generated from [AspireSessionHostModel.kt:60]
  */
 enum class ResourceType {
     Project, 
@@ -893,15 +908,26 @@ enum class ResourceType {
     Executable, 
     Unknown;
     
-    companion object {
+    companion object : IMarshaller<ResourceType> {
         val marshaller = FrameworkMarshallers.enum<ResourceType>()
         
+        
+        override val _type: KClass<ResourceType> = ResourceType::class
+        override val id: RdId get() = RdId(-1311735068701761509)
+        
+        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ResourceType {
+            return marshaller.read(ctx, buffer)
+        }
+        
+        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ResourceType)  {
+            marshaller.write(ctx, buffer, value)
+        }
     }
 }
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:48]
+ * #### Generated from [AspireSessionHostModel.kt:51]
  */
 class ResourceWrapper private constructor(
     private val _model: RdOptionalProperty<ResourceModel>,
@@ -913,6 +939,7 @@ class ResourceWrapper private constructor(
     
     companion object : IMarshaller<ResourceWrapper> {
         override val _type: KClass<ResourceWrapper> = ResourceWrapper::class
+        override val id: RdId get() = RdId(-7695483574898099182)
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ResourceWrapper  {
@@ -944,6 +971,10 @@ class ResourceWrapper private constructor(
     init {
         _model.optimizeNested = true
         _isInitialized.optimizeNested = true
+    }
+    
+    init {
+        _isInitialized.async = true
     }
     
     init {
@@ -1000,6 +1031,7 @@ data class SessionEnvironmentVariable (
     
     companion object : IMarshaller<SessionEnvironmentVariable> {
         override val _type: KClass<SessionEnvironmentVariable> = SessionEnvironmentVariable::class
+        override val id: RdId get() = RdId(-5369615389742325332)
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): SessionEnvironmentVariable  {
@@ -1057,7 +1089,6 @@ data class SessionEnvironmentVariable (
  * #### Generated from [AspireSessionHostModel.kt:38]
  */
 data class SessionModel (
-    val id: String,
     val projectPath: String,
     val debug: Boolean,
     val launchProfile: String?,
@@ -1069,21 +1100,20 @@ data class SessionModel (
     
     companion object : IMarshaller<SessionModel> {
         override val _type: KClass<SessionModel> = SessionModel::class
+        override val id: RdId get() = RdId(-1286323512761547290)
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): SessionModel  {
-            val id = buffer.readString()
             val projectPath = buffer.readString()
             val debug = buffer.readBool()
             val launchProfile = buffer.readNullable { buffer.readString() }
             val disableLaunchProfile = buffer.readBool()
             val args = buffer.readNullable { buffer.readArray {buffer.readString()} }
             val envs = buffer.readNullable { buffer.readArray {SessionEnvironmentVariable.read(ctx, buffer)} }
-            return SessionModel(id, projectPath, debug, launchProfile, disableLaunchProfile, args, envs)
+            return SessionModel(projectPath, debug, launchProfile, disableLaunchProfile, args, envs)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: SessionModel)  {
-            buffer.writeString(value.id)
             buffer.writeString(value.projectPath)
             buffer.writeBool(value.debug)
             buffer.writeNullable(value.launchProfile) { buffer.writeString(it) }
@@ -1105,7 +1135,6 @@ data class SessionModel (
         
         other as SessionModel
         
-        if (id != other.id) return false
         if (projectPath != other.projectPath) return false
         if (debug != other.debug) return false
         if (launchProfile != other.launchProfile) return false
@@ -1118,7 +1147,6 @@ data class SessionModel (
     //hash code trait
     override fun hashCode(): Int  {
         var __r = 0
-        __r = __r*31 + id.hashCode()
         __r = __r*31 + projectPath.hashCode()
         __r = __r*31 + debug.hashCode()
         __r = __r*31 + if (launchProfile != null) launchProfile.hashCode() else 0
@@ -1131,7 +1159,6 @@ data class SessionModel (
     override fun print(printer: PrettyPrinter)  {
         printer.println("SessionModel (")
         printer.indent {
-            print("id = "); id.print(printer); println()
             print("projectPath = "); projectPath.print(printer); println()
             print("debug = "); debug.print(printer); println()
             print("launchProfile = "); launchProfile.print(printer); println()
@@ -1148,7 +1175,66 @@ data class SessionModel (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:111]
+ * #### Generated from [AspireSessionHostModel.kt:47]
+ */
+data class SessionUpsertResult (
+    val sessionId: String
+) : IPrintable {
+    //companion
+    
+    companion object : IMarshaller<SessionUpsertResult> {
+        override val _type: KClass<SessionUpsertResult> = SessionUpsertResult::class
+        override val id: RdId get() = RdId(-1200535963048262449)
+        
+        @Suppress("UNCHECKED_CAST")
+        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): SessionUpsertResult  {
+            val sessionId = buffer.readString()
+            return SessionUpsertResult(sessionId)
+        }
+        
+        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: SessionUpsertResult)  {
+            buffer.writeString(value.sessionId)
+        }
+        
+        
+    }
+    //fields
+    //methods
+    //initializer
+    //secondary constructor
+    //equals trait
+    override fun equals(other: Any?): Boolean  {
+        if (this === other) return true
+        if (other == null || other::class != this::class) return false
+        
+        other as SessionUpsertResult
+        
+        if (sessionId != other.sessionId) return false
+        
+        return true
+    }
+    //hash code trait
+    override fun hashCode(): Int  {
+        var __r = 0
+        __r = __r*31 + sessionId.hashCode()
+        return __r
+    }
+    //pretty print
+    override fun print(printer: PrettyPrinter)  {
+        printer.println("SessionUpsertResult (")
+        printer.indent {
+            print("sessionId = "); sessionId.print(printer); println()
+        }
+        printer.print(")")
+    }
+    //deepClone
+    //contexts
+    //threading
+}
+
+
+/**
+ * #### Generated from [AspireSessionHostModel.kt:114]
  */
 data class TraceNode (
     val id: String,
@@ -1161,6 +1247,7 @@ data class TraceNode (
     
     companion object : IMarshaller<TraceNode> {
         override val _type: KClass<TraceNode> = TraceNode::class
+        override val id: RdId get() = RdId(577221124058644)
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): TraceNode  {
@@ -1230,7 +1317,7 @@ data class TraceNode (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:124]
+ * #### Generated from [AspireSessionHostModel.kt:127]
  */
 data class TraceNodeAttribute (
     val key: String,
@@ -1240,6 +1327,7 @@ data class TraceNodeAttribute (
     
     companion object : IMarshaller<TraceNodeAttribute> {
         override val _type: KClass<TraceNodeAttribute> = TraceNodeAttribute::class
+        override val id: RdId get() = RdId(7298853094950171368)
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): TraceNodeAttribute  {
@@ -1294,7 +1382,7 @@ data class TraceNodeAttribute (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:119]
+ * #### Generated from [AspireSessionHostModel.kt:122]
  */
 data class TraceNodeChild (
     val id: String,
@@ -1304,6 +1392,7 @@ data class TraceNodeChild (
     
     companion object : IMarshaller<TraceNodeChild> {
         override val _type: KClass<TraceNodeChild> = TraceNodeChild::class
+        override val id: RdId get() = RdId(-2931968979041238168)
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): TraceNodeChild  {

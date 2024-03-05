@@ -80,7 +80,7 @@ internal sealed class SessionResourceLogService(
 
         //Sometimes Aspire returns just an empty list, and the method simply quits without sending any log.
         //In such a case, we want to retry the method.
-        //So, only if the corresponding token has been canceled we should stop execution.
+        //So, only if the corresponding token has been canceled, we should stop execution.
         return ct.IsCancellationRequested;
     }
 

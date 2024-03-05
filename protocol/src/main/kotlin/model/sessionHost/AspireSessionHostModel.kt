@@ -36,7 +36,6 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
     }
 
     private val SessionModel = structdef {
-        field("id", string)
         field("projectPath", string)
         field("debug", bool)
         field("launchProfile", string.nullable)
@@ -45,9 +44,13 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
         field("envs", array(SessionEnvironmentVariable).nullable)
     }
 
+    private val SessionUpsertResult = structdef {
+        field("sessionId", string)
+    }
+
     private val ResourceWrapper = classdef {
         property("model", ResourceModel)
-        property("isInitialized", bool)
+        property("isInitialized", bool).async
         sink("logReceived", ResourceLog)
         sink("metricReceived", ResourceMetric)
     }
@@ -127,7 +130,8 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
     }
 
     init {
-        map("sessions", string, SessionModel)
+        callback("upsertSession", SessionModel, SessionUpsertResult.nullable)
+        callback("deleteSession", string, bool)
 
         source("processStarted", ProcessStarted)
         source("processTerminated", ProcessTerminated)

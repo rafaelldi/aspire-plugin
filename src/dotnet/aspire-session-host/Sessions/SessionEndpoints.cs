@@ -16,15 +16,15 @@ internal static class SessionEndpoints
             "/",
             async Task<Results<Created<Session>, BadRequest<string>>> (Session session, SessionService service) =>
             {
-                var id = await service.Create(session);
-                return id.HasValue
-                    ? TypedResults.Created($"/run_session/{id.Value}", session)
+                var result = await service.Upsert(session);
+                return result != null
+                    ? TypedResults.Created($"/run_session/{result.SessionId}", session)
                     : TypedResults.BadRequest("Unable to create a session");
             });
 
         group.MapDelete(
-            "/{sessionId:guid}",
-            async Task<Results<Ok, NoContent>> (Guid sessionId, SessionService service) =>
+            "/{sessionId}",
+            async Task<Results<Ok, NoContent>> (string sessionId, SessionService service) =>
             {
                 var isSuccessful = await service.Delete(sessionId);
                 return isSuccessful ? TypedResults.Ok() : TypedResults.NoContent();

@@ -30,13 +30,11 @@ import com.jetbrains.rider.run.pid
 import com.jetbrains.rider.runtime.RiderDotNetActiveRuntimeHost
 import com.jetbrains.rider.util.NetUtils
 import icons.RiderIcons
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.consumeAsFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rafaelldi.aspire.generated.SessionModel
+import me.rafaelldi.aspire.generated.SessionUpsertResult
 import me.rafaelldi.aspire.settings.AspireSettings
 import me.rafaelldi.aspire.util.MSBuildPropertyService
 import me.rafaelldi.aspire.util.decodeAnsiCommandsToString
@@ -47,7 +45,7 @@ import kotlin.io.path.absolutePathString
 import kotlin.io.path.nameWithoutExtension
 
 @Service(Service.Level.PROJECT)
-class AspireSessionRunner(private val project: Project, scope: CoroutineScope) {
+class AspireSessionRunner(private val project: Project) {
     companion object {
         fun getInstance(project: Project) = project.service<AspireSessionRunner>()
 
@@ -57,57 +55,25 @@ class AspireSessionRunner(private val project: Project, scope: CoroutineScope) {
         private fun getOtlpEndpoint(port: Int) = "http://localhost:$port"
     }
 
-    private val commandChannel = Channel<RunSessionCommand>(Channel.UNLIMITED)
-
-    data class RunSessionCommand(
-        val sessionId: String,
-        val sessionModel: SessionModel,
-        val sessionLifetime: Lifetime,
-        val sessionEvents: Channel<AspireSessionEvent>,
-        val hostName: String,
-        val isHostDebug: Boolean,
-        val openTelemetryPort: Int
-    )
-
-    init {
-        scope.launch(Dispatchers.Default) {
-            commandChannel.consumeAsFlow().collect {
-                runSession(
-                    it.sessionId,
-                    it.sessionModel,
-                    it.sessionLifetime,
-                    it.sessionEvents,
-                    it.isHostDebug,
-                    it.openTelemetryPort
-                )
-            }
-        }
-    }
-
-    fun runSession(command: RunSessionCommand) {
-        LOG.trace("Sending run session command $command")
-        commandChannel.trySend(command)
-    }
-
-    private suspend fun runSession(
+    suspend fun runSession(
         sessionId: String,
         sessionModel: SessionModel,
         sessionLifetime: Lifetime,
         sessionEvents: Channel<AspireSessionEvent>,
         isHostDebug: Boolean,
         openTelemetryPort: Int
-    ) {
+    ): SessionUpsertResult? {
         LOG.info("Starting a session for the project ${sessionModel.projectPath}")
 
         if (sessionLifetime.isNotAlive) {
             LOG.warn("Unable to run project ${sessionModel.projectPath} because lifetimes are not alive")
-            return
+            return null
         }
 
         val executable = getExecutable(sessionModel)
         if (executable == null) {
             LOG.warn("Unable to find executable for $sessionId (project: ${sessionModel.projectPath})")
-            return
+            return null
         }
 
         val isDebug = isHostDebug || sessionModel.debug
@@ -130,6 +96,8 @@ class AspireSessionRunner(private val project: Project, scope: CoroutineScope) {
                 openTelemetryPort
             )
         }
+
+        return SessionUpsertResult(sessionId)
     }
 
     private suspend fun getExecutable(sessionModel: SessionModel): Pair<Path, RdTargetFrameworkId?>? {
