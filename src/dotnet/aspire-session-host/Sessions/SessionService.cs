@@ -6,32 +6,29 @@ namespace AspireSessionHost.Sessions;
 
 internal sealed class SessionService(Connection connection, ILogger<SessionService> logger)
 {
-    internal async Task<Guid?> Create(Session session)
+    internal async Task<SessionUpsertResult?> Upsert(Session session)
     {
-        var id = Guid.NewGuid();
-        var stringId = id.ToString();
         var envs = session.Env
             ?.Where(it => it.Value is not null)
             ?.Select(it => new SessionEnvironmentVariable(it.Name, it.Value!))
             ?.ToArray();
         var sessionModel = new SessionModel(
-            stringId,
             session.ProjectPath,
-            session.Debug,
+            session.Debug ?? false,
+            session.LaunchProfile,
+            session.DisableLaunchProfile ?? false,
             session.Args,
             envs
         );
         logger.LogInformation("Starting a new session {session}", sessionModel);
 
-        var result = await connection.DoWithModel(model => model.Sessions.TryAdd(stringId, sessionModel));
-
-        return result ? id : null;
+        return await connection.DoWithModel(model => model.UpsertSession.Sync(sessionModel));
     }
 
-    internal async Task<bool> Delete(Guid id)
+    internal async Task<bool> Delete(string id)
     {
         logger.LogInformation("Deleting the new session {sessionId}", id);
 
-        return await connection.DoWithModel(model => model.Sessions.Remove(id.ToString()));
+        return await connection.DoWithModel(model => model.DeleteSession.Sync(id));
     }
 }

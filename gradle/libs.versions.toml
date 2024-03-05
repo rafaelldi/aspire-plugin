@@ -4,6 +4,7 @@ annotations = "24.1.0"
 
 # plugins
 kotlin = "1.9.22"
+serialization = "1.9.22"
 changelog = "2.2.0"
 gradleIntelliJPlugin = "1.17.2"
 qodana = "0.1.13"
@@ -17,5 +18,6 @@ annotations = { group = "org.jetbrains", name = "annotations", version.ref = "an
 changelog = { id = "org.jetbrains.changelog", version.ref = "changelog" }
 gradleIntelliJPlugin = { id = "org.jetbrains.intellij", version.ref = "gradleIntelliJPlugin" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "serialization" }
 qodana = { id = "org.jetbrains.qodana", version.ref = "qodana" }
 rdgen = { id = "com.jetbrains.rdgen", version.ref = "rdgen" }
