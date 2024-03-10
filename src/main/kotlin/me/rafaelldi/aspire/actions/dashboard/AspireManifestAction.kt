@@ -4,34 +4,34 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import me.rafaelldi.aspire.manifest.ManifestService
-import me.rafaelldi.aspire.sessionHost.AspireSessionHostManager
-import me.rafaelldi.aspire.util.SESSION_HOST_ID
+import me.rafaelldi.aspire.services.AspireServiceManager
+import me.rafaelldi.aspire.util.ASPIRE_HOST_PATH
 
 class AspireManifestAction : AnAction() {
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project ?: return
-        val sessionHostId = event.getData(SESSION_HOST_ID) ?: return
-        val sessionHost = AspireSessionHostManager
+        val hostPath = event.getData(ASPIRE_HOST_PATH) ?: return
+        val hostService = AspireServiceManager
             .getInstance(project)
-            .getSessionHost(sessionHostId)
+            .getHostService(hostPath)
             ?: return
-        val hostPath = sessionHost.hostData.hostProjectPath ?: return
+        val hostProjectPath = hostService.projectPath
 
-        ManifestService.getInstance(project).generateManifest(hostPath)
+        ManifestService.getInstance(project).generateManifest(hostProjectPath)
     }
 
     override fun update(event: AnActionEvent) {
         val project = event.project
-        val sessionHostId = event.getData(SESSION_HOST_ID)
-        if (project == null || sessionHostId == null) {
+        val hostPath = event.getData(ASPIRE_HOST_PATH)
+        if (project == null || hostPath == null) {
             event.presentation.isEnabledAndVisible = false
             return
         }
 
-        val hostAvailable = AspireSessionHostManager
+        val hostService = AspireServiceManager
             .getInstance(project)
-            .isSessionHostAvailable(sessionHostId)
-        if (!hostAvailable) {
+            .getHostService(hostPath)
+        if (hostService == null) {
             event.presentation.isEnabledAndVisible = false
             return
         }

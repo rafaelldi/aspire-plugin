@@ -1,13 +1,12 @@
-package me.rafaelldi.aspire.sessionHost
+package me.rafaelldi.aspire.run
 
 import java.nio.file.Path
 
-data class AspireSessionHostConfig(
+data class AspireHostProjectConfig(
     val debugSessionToken: String,
     val debugSessionPort: Int,
-    val runProfileName: String,
-    val aspireHostProjectPath: Path?,
-    val aspireHostProjectUrl: String?,
+    val aspireHostProjectPath: Path,
+    val aspireHostProjectUrl: String,
     val isDebug: Boolean,
     val resourceServiceUrl: String?,
     val openTelemetryProtocolUrl: String?,

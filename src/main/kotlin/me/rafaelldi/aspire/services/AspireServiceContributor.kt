@@ -4,17 +4,16 @@ import com.intellij.execution.services.ServiceViewContributor
 import com.intellij.execution.services.SimpleServiceViewDescriptor
 import com.intellij.openapi.project.Project
 import me.rafaelldi.aspire.AspireIcons
-import me.rafaelldi.aspire.sessionHost.AspireSessionHostManager
 
-class AspireServiceContributor : ServiceViewContributor<AspireSessionHostServiceContributor> {
+class AspireServiceContributor : ServiceViewContributor<AspireHostService> {
     override fun getViewDescriptor(project: Project) =
         SimpleServiceViewDescriptor("Aspire", AspireIcons.Service)
 
     override fun getServices(project: Project) =
-        AspireSessionHostManager.getInstance(project)
-            .getSessionHosts()
+        AspireServiceManager.getInstance(project)
+            .getHostServices()
             .toMutableList()
 
-    override fun getServiceDescriptor(project: Project, host: AspireSessionHostServiceContributor) =
+    override fun getServiceDescriptor(project: Project, host: AspireHostService) =
         host.getViewDescriptor(project)
 }

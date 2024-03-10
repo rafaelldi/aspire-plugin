@@ -12,7 +12,7 @@
     <resource-bundle>messages.AspireBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-<!--        <postStartupActivity implementation="me.rafaelldi.aspire.workload.UpdateWorkloadActivity"/>-->
+        <!--        <postStartupActivity implementation="me.rafaelldi.aspire.workload.UpdateWorkloadActivity"/>-->
 
         <configurationType implementation="me.rafaelldi.aspire.run.AspireHostConfigurationType"/>
         <programRunner implementation="me.rafaelldi.aspire.run.AspireHostProgramRunner"/>
@@ -37,6 +37,11 @@
         <iconMapper mappingFile="AspireIconMappings.json"/>
     </extensions>
 
+    <projectListeners>
+        <listener class="me.rafaelldi.aspire.services.AspireServiceManager$Listener"
+                  topic="com.intellij.execution.RunManagerListener"/>
+    </projectListeners>
+
     <actions>
         <action id="Aspire.Settings"
                 class="me.rafaelldi.aspire.actions.dashboard.AspireSettingsAction"
@@ -44,13 +49,13 @@
         <action id="Aspire.Help"
                 class="me.rafaelldi.aspire.actions.dashboard.AspireHelpAction"/>
         <action id="Aspire.Dashboard"
-                class="me.rafaelldi.aspire.actions.dashboard.OpenAspireDashboardAction"
+                class="me.rafaelldi.aspire.actions.dashboard.AspireOpenDashboardAction"
                 icon="AllIcons.General.Web"/>
         <action id="Aspire.Manifest"
                 class="me.rafaelldi.aspire.actions.dashboard.AspireManifestAction"
                 icon="AllIcons.FileTypes.Json"/>
         <action id="Aspire.Diagram"
-                class="me.rafaelldi.aspire.actions.dashboard.ShowDiagramAction"
+                class="me.rafaelldi.aspire.actions.dashboard.AspireShowDiagramAction"
                 icon="AllIcons.FileTypes.Diagram"/>
         <action id="Aspire.Solution.Manifest"
                 class="me.rafaelldi.aspire.actions.ManifestGenerationAction"

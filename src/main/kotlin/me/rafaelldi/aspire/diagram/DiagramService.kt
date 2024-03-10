@@ -9,17 +9,19 @@ import com.intellij.diagram.v2.layout.GraphChartLayoutOrientation
 import com.intellij.diagram.v2.layout.GraphChartLayoutService
 import com.intellij.diagram.v2.painting.GraphChartEdgePainter
 import com.intellij.diagram.v2.painting.GraphChartPainterService
+import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.rd.util.withUiContext
 import com.intellij.ui.JBColor
 import com.intellij.uml.v2.painting.edges.GraphChartEdgePainterEdgeLabelImpl
 import com.intellij.util.graph.GraphFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import me.rafaelldi.aspire.actions.chart.PopupAction
 import me.rafaelldi.aspire.actions.chart.ShowHideGroupsAction
 import me.rafaelldi.aspire.generated.TraceNode
-import me.rafaelldi.aspire.sessionHost.AspireSessionHostManager
+import me.rafaelldi.aspire.services.AspireHostService
 import java.awt.Color
 
 @Service(Service.Level.PROJECT)
@@ -32,11 +34,11 @@ class DiagramService(private val project: Project) {
 
     private val diagramStates = mutableMapOf<String, DiagramState>()
 
-    suspend fun showDiagram(sessionHostId: String) {
-        val manager = AspireSessionHostManager.getInstance(project)
-        val host = manager.getSessionHost(sessionHostId) ?: return
-        val nodes = withUiContext {
-            host.hostData.sessionHostModel.getTraceNodes.startSuspending(host.hostData.sessionHostLifetime, Unit)
+    suspend fun showDiagram(hostService: AspireHostService) {
+        val model = hostService.model ?: return
+        val lifetime = hostService.lifetime ?: return
+        val nodes = withContext(Dispatchers.EDT) {
+            model.getTraceNodes.startSuspending(lifetime, Unit)
         }
         showDiagramAndStoreState(TRACE_DIAGRAM, nodes.toList())
     }

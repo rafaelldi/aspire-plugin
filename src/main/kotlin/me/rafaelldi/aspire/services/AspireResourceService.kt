@@ -20,7 +20,7 @@ import kotlin.math.roundToInt
 class AspireResourceService(
     wrapper: ResourceWrapper,
     val lifetime: Lifetime,
-    private val sessionHost: AspireSessionHostServiceContributor,
+    private val hostService: AspireHostService,
     private val project: Project
 ) {
     var name: String
@@ -161,7 +161,7 @@ class AspireResourceService(
 
         val serviceEvent = ServiceEventListener.ServiceEvent.createEvent(
             ServiceEventListener.EventType.SERVICE_CHILDREN_CHANGED,
-            sessionHost,
+            hostService,
             AspireServiceContributor::class.java
         )
         project.messageBus.syncPublisher(ServiceEventListener.TOPIC).handle(serviceEvent)

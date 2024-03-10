@@ -3,35 +3,41 @@ package me.rafaelldi.aspire.actions.dashboard
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.rd.util.lifetime
-import com.jetbrains.rd.util.threading.coroutines.launch
+import kotlinx.coroutines.launch
+import me.rafaelldi.aspire.AspireService
 import me.rafaelldi.aspire.diagram.DiagramService
-import me.rafaelldi.aspire.sessionHost.AspireSessionHostManager
+import me.rafaelldi.aspire.services.AspireServiceManager
 import me.rafaelldi.aspire.settings.AspireSettings
-import me.rafaelldi.aspire.util.SESSION_HOST_ID
+import me.rafaelldi.aspire.util.ASPIRE_HOST_PATH
 
-class ShowDiagramAction : AnAction() {
+class AspireShowDiagramAction : AnAction() {
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project ?: return
-        val sessionHostId = event.getData(SESSION_HOST_ID) ?: return
-        val service = DiagramService.getInstance(project)
-        project.lifetime.launch {
-            service.showDiagram(sessionHostId)
+        val hostPath = event.getData(ASPIRE_HOST_PATH) ?: return
+        val hostService = AspireServiceManager
+            .getInstance(project)
+            .getHostService(hostPath)
+            ?: return
+        if (!hostService.isActive) return
+
+        val diagramService = DiagramService.getInstance(project)
+        AspireService.getInstance(project).scope.launch {
+            diagramService.showDiagram(hostService)
         }
     }
 
     override fun update(event: AnActionEvent) {
         val project = event.project
-        val sessionHostId = event.getData(SESSION_HOST_ID)
-        if (project == null || sessionHostId == null) {
+        val hostPath = event.getData(ASPIRE_HOST_PATH)
+        if (project == null || hostPath == null) {
             event.presentation.isEnabledAndVisible = false
             return
         }
 
-        val hostAvailable = AspireSessionHostManager
+        val hostService = AspireServiceManager
             .getInstance(project)
-            .isSessionHostAvailable(sessionHostId)
-        if (!hostAvailable) {
+            .getHostService(hostPath)
+        if (hostService == null || !hostService.isActive) {
             event.presentation.isEnabledAndVisible = false
             return
         }

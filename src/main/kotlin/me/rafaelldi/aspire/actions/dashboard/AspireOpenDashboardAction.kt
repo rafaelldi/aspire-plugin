@@ -4,18 +4,18 @@ import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import me.rafaelldi.aspire.sessionHost.AspireSessionHostManager
-import me.rafaelldi.aspire.util.SESSION_HOST_ID
+import me.rafaelldi.aspire.services.AspireServiceManager
+import me.rafaelldi.aspire.util.ASPIRE_HOST_PATH
 
-class OpenAspireDashboardAction : AnAction() {
+class AspireOpenDashboardAction : AnAction() {
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project ?: return
-        val sessionHostId = event.getData(SESSION_HOST_ID) ?: return
-        val sessionHost = AspireSessionHostManager
+        val hostPath = event.getData(ASPIRE_HOST_PATH) ?: return
+        val hostService = AspireServiceManager
             .getInstance(project)
-            .getSessionHost(sessionHostId)
+            .getHostService(hostPath)
             ?: return
-        val dashboardUrl = sessionHost.hostData.dashboardUrl
+        val dashboardUrl = hostService.dashboardUrl
         if (dashboardUrl.isNullOrEmpty()) return
 
         BrowserUtil.browse(dashboardUrl)
@@ -23,16 +23,16 @@ class OpenAspireDashboardAction : AnAction() {
 
     override fun update(event: AnActionEvent) {
         val project = event.project
-        val sessionHostId = event.getData(SESSION_HOST_ID)
-        if (project == null || sessionHostId == null) {
+        val hostPath = event.getData(ASPIRE_HOST_PATH)
+        if (project == null || hostPath == null) {
             event.presentation.isEnabledAndVisible = false
             return
         }
 
-        val hostAvailable = AspireSessionHostManager
+        val hostService = AspireServiceManager
             .getInstance(project)
-            .isSessionHostAvailable(sessionHostId)
-        if (!hostAvailable) {
+            .getHostService(hostPath)
+        if (hostService == null || !hostService.isActive) {
             event.presentation.isEnabledAndVisible = false
             return
         }

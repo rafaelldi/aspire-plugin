@@ -17,6 +17,7 @@ import com.intellij.openapi.util.Key
 import com.jetbrains.rd.util.lifetime.LifetimeDefinition
 import com.jetbrains.rider.runtime.RiderDotNetActiveRuntimeHost
 import com.jetbrains.rider.runtime.dotNetCore.DotNetCoreRuntime
+import me.rafaelldi.aspire.run.AspireHostProjectConfig
 import me.rafaelldi.aspire.util.decodeAnsiCommandsToString
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
@@ -46,20 +47,20 @@ class AspireSessionHostRunner(private val project: Project) {
     }
 
     fun runSessionHost(
-        sessionHostConfig: AspireSessionHostConfig,
+        aspireHostConfig: AspireHostProjectConfig,
         sessionHostRdPort: Int,
-        sessionHostLifetime: LifetimeDefinition
+        aspireHostLifetime: LifetimeDefinition
     ) {
-        LOG.info("Starting Aspire session host: $sessionHostConfig")
+        LOG.info("Starting Aspire session host: $aspireHostConfig")
 
         val dotnet = RiderDotNetActiveRuntimeHost.getInstance(project).dotNetCoreRuntime.value
             ?: throw CantRunException("Cannot find active .NET runtime")
 
-        val commandLine = getCommandLine(dotnet, sessionHostConfig, sessionHostRdPort)
+        val commandLine = getCommandLine(dotnet, aspireHostConfig, sessionHostRdPort)
         LOG.trace("Host command line: ${commandLine.commandLineString}")
 
         val processHandler = KillableColoredProcessHandler(commandLine)
-        sessionHostLifetime.onTermination {
+        aspireHostLifetime.onTermination {
             if (!processHandler.isProcessTerminating && !processHandler.isProcessTerminated) {
                 LOG.trace("Killing Aspire session host process")
                 processHandler.killProcess()
@@ -76,12 +77,12 @@ class AspireSessionHostRunner(private val project: Project) {
             }
 
             override fun processTerminated(event: ProcessEvent) {
-                sessionHostLifetime.executeIfAlive {
+                aspireHostLifetime.executeIfAlive {
                     LOG.trace("Terminating Aspire session host lifetime")
-                    sessionHostLifetime.terminate(true)
+                    aspireHostLifetime.terminate(true)
                 }
             }
-        }, sessionHostLifetime.createNestedDisposable())
+        }, aspireHostLifetime.createNestedDisposable())
 
         processHandler.startNotify()
         LOG.info("Aspire session host started")
@@ -89,7 +90,7 @@ class AspireSessionHostRunner(private val project: Project) {
 
     private fun getCommandLine(
         dotnet: DotNetCoreRuntime,
-        sessionHostConfig: AspireSessionHostConfig,
+        aspireHostConfig: AspireHostProjectConfig,
         rdPort: Int
     ): GeneralCommandLine {
         val commandLine = GeneralCommandLine()
@@ -99,14 +100,14 @@ class AspireSessionHostRunner(private val project: Project) {
             .withWorkDirectory(hostAssemblyPath.parent.toFile())
             .withEnvironment(
                 buildMap {
-                    put(ASPNETCORE_URLS, "http://localhost:${sessionHostConfig.debugSessionPort}/")
+                    put(ASPNETCORE_URLS, "http://localhost:${aspireHostConfig.debugSessionPort}/")
                     put(RIDER_RD_PORT, "$rdPort")
                     put(RIDER_PARENT_PROCESS_PID, ProcessHandle.current().pid().toString())
-                    if (sessionHostConfig.resourceServiceUrl != null)
-                        put(RIDER_RESOURCE_ENDPOINT_URL, sessionHostConfig.resourceServiceUrl)
-                    if (sessionHostConfig.openTelemetryProtocolUrl != null) {
-                        put(RIDER_OTLP_SERVER_PORT, sessionHostConfig.openTelemetryProtocolServerPort.toString())
-                        put(RIDER_OTLP_ENDPOINT_URL, sessionHostConfig.openTelemetryProtocolUrl)
+                    if (aspireHostConfig.resourceServiceUrl != null)
+                        put(RIDER_RESOURCE_ENDPOINT_URL, aspireHostConfig.resourceServiceUrl)
+                    if (aspireHostConfig.openTelemetryProtocolUrl != null) {
+                        put(RIDER_OTLP_SERVER_PORT, aspireHostConfig.openTelemetryProtocolServerPort.toString())
+                        put(RIDER_OTLP_ENDPOINT_URL, aspireHostConfig.openTelemetryProtocolUrl)
                     }
                 }
             )
