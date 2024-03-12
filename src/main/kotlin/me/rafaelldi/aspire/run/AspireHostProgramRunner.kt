@@ -6,7 +6,6 @@ import com.intellij.execution.configurations.RunProfileState
 import com.intellij.execution.executors.DefaultDebugExecutor
 import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessListener
-import com.intellij.execution.process.ProcessOutputType
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.execution.runners.showRunContent
 import com.intellij.execution.ui.RunContentDescriptor
@@ -14,7 +13,6 @@ import com.intellij.openapi.application.EDT
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.rd.util.lifetime
 import com.intellij.openapi.rd.util.startOnUiAsync
-import com.intellij.openapi.util.Key
 import com.jetbrains.rd.framework.*
 import com.jetbrains.rd.util.lifetime.Lifetime
 import com.jetbrains.rdclient.protocol.RdDispatcher
@@ -22,15 +20,10 @@ import com.jetbrains.rider.debugger.DotNetProgramRunner
 import com.jetbrains.rider.run.DotNetProcessRunProfileState
 import com.jetbrains.rider.util.NetUtils
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
 import me.rafaelldi.aspire.generated.aspireSessionHostModel
-import me.rafaelldi.aspire.services.AspireHostLog
 import me.rafaelldi.aspire.services.AspireServiceManager
 import me.rafaelldi.aspire.sessionHost.AspireSessionHostManager
-import me.rafaelldi.aspire.util.decodeAnsiCommandsToString
 import org.jetbrains.concurrency.Promise
 import org.jetbrains.concurrency.asPromise
 import kotlin.io.path.Path
@@ -94,15 +87,12 @@ class AspireHostProgramRunner : DotNetProgramRunner() {
         )
         LOG.trace("Aspire session host config: $config")
 
-        val aspireHostLogFlow = MutableSharedFlow<AspireHostLog>(extraBufferCapacity = 20, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-
         val sessionHostPromise = aspireHostLifetime.startOnUiAsync {
             val protocol = startProtocol(aspireHostLifetime)
             val sessionHostModel = protocol.aspireSessionHostModel
 
             AspireServiceManager.getInstance(environment.project).startAspireHostService(
                 config,
-                aspireHostLogFlow.asSharedFlow(),
                 sessionHostModel,
                 aspireHostLifetime.createNested()
             )
@@ -118,6 +108,9 @@ class AspireHostProgramRunner : DotNetProgramRunner() {
         return sessionHostPromise.then {
             val executionResult = state.execute(environment.executor, this)
 
+            AspireServiceManager.getInstance(environment.project)
+                .updateAspireHostService(config.aspireHostProjectPath, executionResult)
+
             val processHandler = executionResult.processHandler
             aspireHostLifetime.onTermination {
                 LOG.trace("Aspire host lifetime is terminated")
@@ -126,12 +119,6 @@ class AspireHostProgramRunner : DotNetProgramRunner() {
                 }
             }
             processHandler.addProcessListener(object : ProcessListener {
-                override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
-                    val text = decodeAnsiCommandsToString(event.text, outputType)
-                    val isStdErr = outputType == ProcessOutputType.STDERR
-                    aspireHostLogFlow.tryEmit(AspireHostLog(text, isStdErr))
-                }
-
                 override fun processTerminated(event: ProcessEvent) {
                     LOG.trace("Aspire host process is terminated")
                     aspireHostLifetime.executeIfAlive {

@@ -1,16 +1,10 @@
 package me.rafaelldi.aspire.services
 
-import com.intellij.execution.filters.TextConsoleBuilderFactory
-import com.intellij.execution.services.ServiceEventListener
+import com.intellij.execution.ExecutionResult
 import com.intellij.execution.services.ServiceViewProvidingContributor
-import com.intellij.execution.ui.ConsoleView
-import com.intellij.execution.ui.ConsoleViewContentType
+import com.intellij.execution.ui.ExecutionConsole
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Disposer
 import com.jetbrains.rd.util.lifetime.Lifetime
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.launch
-import me.rafaelldi.aspire.AspireService
 import me.rafaelldi.aspire.generated.AspireSessionHostModel
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
@@ -18,7 +12,6 @@ import kotlin.io.path.absolutePathString
 class AspireHostService(
     name: String,
     val projectPath: Path,
-    private val project: Project
 ) : ServiceViewProvidingContributor<AspireResourceService, AspireHostService> {
 
     private val viewDescriptor by lazy { AspireHostServiceViewDescriptor(this) }
@@ -36,21 +29,12 @@ class AspireHostService(
     var lifetime: Lifetime? = null
         private set
 
-    private val consoleView: ConsoleView = TextConsoleBuilderFactory
-        .getInstance()
-        .createBuilder(project)
-        .apply { setViewer(true) }
-        .console
+    var executionConsole: ExecutionConsole? = null
+        private set
 
-    fun getConsole() = consoleView
-
-    init {
-        Disposer.register(AspireService.getInstance(project), consoleView)
-    }
 
     fun startHost(
         aspireHostDashboardUrl: String,
-        aspireHostLogFlow: SharedFlow<AspireHostLog>,
         sessionHostModel: AspireSessionHostModel,
         aspireHostLifetime: Lifetime
     ) {
@@ -58,24 +42,6 @@ class AspireHostService(
         dashboardUrl = aspireHostDashboardUrl
         model = sessionHostModel
         lifetime = aspireHostLifetime
-        consoleView.clear()
-
-        aspireHostLifetime.coroutineScope.launch {
-            aspireHostLogFlow.collect {
-                consoleView.print(
-                    it.text,
-                    if (!it.isError) ConsoleViewContentType.NORMAL_OUTPUT
-                    else ConsoleViewContentType.ERROR_OUTPUT
-                )
-            }
-        }
-
-        val serviceEvent = ServiceEventListener.ServiceEvent.createEvent(
-            ServiceEventListener.EventType.SERVICE_CHANGED,
-            this,
-            AspireServiceContributor::class.java
-        )
-        project.messageBus.syncPublisher(ServiceEventListener.TOPIC).handle(serviceEvent)
     }
 
     fun stopHost() {
@@ -83,24 +49,14 @@ class AspireHostService(
         dashboardUrl = null
         model = null
         lifetime = null
-
-        val serviceEvent = ServiceEventListener.ServiceEvent.createEvent(
-            ServiceEventListener.EventType.SERVICE_CHANGED,
-            this,
-            AspireServiceContributor::class.java
-        )
-        project.messageBus.syncPublisher(ServiceEventListener.TOPIC).handle(serviceEvent)
     }
 
     fun update(name: String) {
         displayName = name
+    }
 
-        val serviceEvent = ServiceEventListener.ServiceEvent.createEvent(
-            ServiceEventListener.EventType.SERVICE_CHANGED,
-            this,
-            AspireServiceContributor::class.java
-        )
-        project.messageBus.syncPublisher(ServiceEventListener.TOPIC).handle(serviceEvent)
+    fun update(executionResult: ExecutionResult) {
+        executionConsole = executionResult.executionConsole
     }
 
     override fun getViewDescriptor(project: Project) = viewDescriptor

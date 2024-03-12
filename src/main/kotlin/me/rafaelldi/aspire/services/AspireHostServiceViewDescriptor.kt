@@ -10,6 +10,7 @@ import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.Separator
 import com.intellij.ui.BadgeIconSupplier
 import com.intellij.ui.SimpleTextAttributes
+import com.intellij.ui.components.JBPanelWithEmptyText
 import com.intellij.util.ui.JBUI
 import me.rafaelldi.aspire.AspireIcons
 import me.rafaelldi.aspire.util.ASPIRE_HOST_PATH
@@ -19,13 +20,6 @@ import javax.swing.JPanel
 class AspireHostServiceViewDescriptor(
     private val hostService: AspireHostService
 ) : ServiceViewDescriptor, DataProvider {
-
-    private val mainPanel by lazy {
-        JPanel(BorderLayout()).apply {
-            border = JBUI.Borders.empty()
-            add(hostService.getConsole().component)
-        }
-    }
 
     private val toolbarActions = DefaultActionGroup(
         ActionManager.getInstance().getAction("Aspire.Manifest"),
@@ -45,7 +39,18 @@ class AspireHostServiceViewDescriptor(
         addText(hostService.displayName, SimpleTextAttributes.REGULAR_ATTRIBUTES)
     }
 
-    override fun getContentComponent() = mainPanel
+    override fun getContentComponent(): JPanel {
+        val console = hostService.executionConsole
+        val panel = if (console == null) {
+            JBPanelWithEmptyText()
+        } else {
+            JPanel(BorderLayout()).apply {
+                border = JBUI.Borders.empty()
+                add(console.component)
+            }
+        }
+        return panel
+    }
 
     override fun getToolbarActions() = toolbarActions
 
