@@ -14,12 +14,20 @@ internal static class SessionEndpoints
 
         group.MapPut(
             "/",
-            async Task<Results<Created<Session>, BadRequest<string>>> (Session session, SessionService service) =>
+            async Task<Results<Created<Session>, BadRequest<ErrorResponse>>> (Session session,
+                SessionService service) =>
             {
                 var id = await service.Create(session);
                 return id.HasValue
                     ? TypedResults.Created($"/run_session/{id.Value}", session)
-                    : TypedResults.BadRequest("Unable to create a session");
+                    : TypedResults.BadRequest(
+                        new ErrorResponse(
+                            new ErrorDetail(
+                                "UnexpectedError",
+                                "Unable to create a session"
+                            )
+                        )
+                    );
             });
 
         group.MapDelete(

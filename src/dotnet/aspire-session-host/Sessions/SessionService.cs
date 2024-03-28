@@ -8,6 +8,10 @@ internal sealed class SessionService(Connection connection, ILogger<SessionServi
 {
     internal async Task<Guid?> Create(Session session)
     {
+        var launchConfiguration = session.LaunchConfigurations
+            .FirstOrDefault(it => string.Equals(it.Type, "project", StringComparison.InvariantCultureIgnoreCase));
+        if (launchConfiguration is null) return null;
+
         var id = Guid.NewGuid();
         var stringId = id.ToString();
         var envs = session.Env
@@ -16,8 +20,8 @@ internal sealed class SessionService(Connection connection, ILogger<SessionServi
             ?.ToArray();
         var sessionModel = new SessionModel(
             stringId,
-            session.ProjectPath,
-            session.Debug,
+            launchConfiguration.ProjectPath,
+            launchConfiguration.Mode == Mode.Debug,
             session.Args,
             envs
         );
