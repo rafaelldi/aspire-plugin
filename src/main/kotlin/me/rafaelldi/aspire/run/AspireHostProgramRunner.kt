@@ -23,6 +23,7 @@ import com.jetbrains.rider.util.NetUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.rafaelldi.aspire.generated.aspireSessionHostModel
+import me.rafaelldi.aspire.otel.OTelResourceManager
 import me.rafaelldi.aspire.services.AspireServiceManager
 import me.rafaelldi.aspire.sessionHost.SessionHostManager
 import me.rafaelldi.aspire.settings.AspireSettings
@@ -94,6 +95,9 @@ class AspireHostProgramRunner : DotNetProgramRunner() {
 
             AspireServiceManager.getInstance(environment.project)
                 .startAspireHostService(config, sessionHostModel)
+
+            OTelResourceManager.getInstance(environment.project)
+                .subscribeToOTelData(config, sessionHostModel)
 
             SessionHostManager.getInstance(environment.project)
                 .startSessionHost(config, protocol.wire.serverPort, sessionHostModel)

@@ -8,6 +8,7 @@ namespace AspireSessionHost.OTel;
 internal sealed class OTelMetricService(
     MetricsService.MetricsServiceClient client,
     ResourceMetricService metricService,
+    RdMetricService rdMetricService,
     ILogger<OTelMetricService> logger
 ) : MetricsService.MetricsServiceBase
 {
@@ -15,6 +16,8 @@ internal sealed class OTelMetricService(
         ExportMetricsServiceRequest request,
         ServerCallContext context)
     {
+        rdMetricService.Send(request);
+
         foreach (var resourceMetric in request.ResourceMetrics)
         {
             var serviceName = resourceMetric.Resource.GetServiceName();

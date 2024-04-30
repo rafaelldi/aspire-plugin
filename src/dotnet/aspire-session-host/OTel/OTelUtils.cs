@@ -1,3 +1,4 @@
+using System.Globalization;
 using Google.Protobuf;
 using OpenTelemetry.Proto.Common.V1;
 using OpenTelemetry.Proto.Resource.V1;
@@ -6,6 +7,7 @@ namespace AspireSessionHost.OTel;
 
 internal static class OTelUtils
 {
+    private const string ServiceInstanceId = "service.instance.id";
     private const string ServiceName = "service.name";
 
     internal static string? GetServiceName(this Resource resource)
@@ -20,6 +22,36 @@ internal static class OTelUtils
 
         return null;
     }
+    
+    internal static (string serviceName, string? serviceId) GetServiceIdAndName(this Resource resource)
+    {
+        var serviceName = "";
+        string? serviceId = null;
+
+        foreach (var attribute in resource.Attributes)
+        {
+            switch (attribute.Key)
+            {
+                case ServiceInstanceId:
+                    serviceId = attribute.Value.ToStringValue();
+                    break;
+                case ServiceName:
+                    serviceName = attribute.Value.ToStringValue();
+                    break;
+            }
+        }
+
+        return (serviceName, serviceId);
+    }
+
+    internal static string ToStringValue(this AnyValue anyValue) => anyValue.ValueCase switch
+    {
+        AnyValue.ValueOneofCase.StringValue => anyValue.StringValue,
+        AnyValue.ValueOneofCase.BoolValue => anyValue.BoolValue ? "true": "false",
+        AnyValue.ValueOneofCase.IntValue => anyValue.IntValue.ToString(CultureInfo.InvariantCulture),
+        AnyValue.ValueOneofCase.DoubleValue => anyValue.DoubleValue.ToString(CultureInfo.InvariantCulture),
+        _ => anyValue.ToString()
+    };
 
     internal static string ToHexString(this ByteString bytes)
     {

@@ -138,6 +138,23 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
         field("value", string)
     }
 
+    private val RdOtelResource = structdef {
+        field("serviceName", string)
+        field("serviceInstanceId", string.nullable)
+    }
+
+    private val RdOtelResourceMetrics = structdef {
+        field("resource", RdOtelResource)
+        field("metrics", RdOtelScopeMetrics)
+    }
+
+    private val RdOtelScopeMetrics = structdef {
+        field("metrics", array(RdOtelMetric))
+    }
+
+    private val RdOtelMetric = structdef {
+    }
+
     init {
         callback("createSession", SessionModel, SessionCreationResult.nullable)
         callback("deleteSession", string, bool)
@@ -149,5 +166,7 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
         map("resources", string, ResourceWrapper)
 
         call("getTraceNodes", void, array(TraceNode))
+
+        sink("metricReceived", RdOtelResourceMetrics)
     }
 }

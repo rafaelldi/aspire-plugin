@@ -23,6 +23,8 @@ internal static class OTelServiceRegistration
 
         services.AddSingleton<ResourceMetricService>();
         services.AddSingleton<SessionNodeService>();
+
+        services.AddSingleton<RdMetricService>();
     }
 
     internal static async Task InitializeOTelServices(this IServiceProvider services)
@@ -36,5 +38,8 @@ internal static class OTelServiceRegistration
 
         var sessionNodeService = scope.ServiceProvider.GetRequiredService<SessionNodeService>();
         await sessionNodeService.Initialize();
+
+        var rdMetricsService = scope.ServiceProvider.GetRequiredService<RdMetricService>();
+        rdMetricsService.Initialize();
     }
 }
