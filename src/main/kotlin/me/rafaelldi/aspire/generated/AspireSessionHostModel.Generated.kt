@@ -57,6 +57,7 @@ class AspireSessionHostModel private constructor(
             serializers.register(LazyCompanionMarshaller(RdId(-1311735068701761509), classLoader, "me.rafaelldi.aspire.generated.ResourceType"))
             serializers.register(LazyCompanionMarshaller(RdId(-3770298982336589872), classLoader, "me.rafaelldi.aspire.generated.ResourceState"))
             serializers.register(LazyCompanionMarshaller(RdId(-15935776453165119), classLoader, "me.rafaelldi.aspire.generated.ResourceStateStyle"))
+            serializers.register(LazyCompanionMarshaller(RdId(-7888161660721341317), classLoader, "me.rafaelldi.aspire.generated.RdOtelMetricType"))
         }
         
         
@@ -79,7 +80,7 @@ class AspireSessionHostModel private constructor(
         private val __SessionCreationResultNullableSerializer = SessionCreationResult.nullable()
         private val __TraceNodeArraySerializer = TraceNode.array()
         
-        const val serializationHash = 7965243802201276607L
+        const val serializationHash = 3231006369673669600L
         
     }
     override val serializersOwner: ISerializersOwner get() = AspireSessionHostModel
@@ -360,9 +361,13 @@ data class ProcessTerminated (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:155]
+ * #### Generated from [AspireSessionHostModel.kt:156]
  */
-class RdOtelMetric (
+data class RdOtelMetric (
+    val name: String,
+    val description: String,
+    val unit: String,
+    val type: RdOtelMetricType
 ) : IPrintable {
     //companion
     
@@ -372,10 +377,18 @@ class RdOtelMetric (
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): RdOtelMetric  {
-            return RdOtelMetric()
+            val name = buffer.readString()
+            val description = buffer.readString()
+            val unit = buffer.readString()
+            val type = buffer.readEnum<RdOtelMetricType>()
+            return RdOtelMetric(name, description, unit, type)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: RdOtelMetric)  {
+            buffer.writeString(value.name)
+            buffer.writeString(value.description)
+            buffer.writeString(value.unit)
+            buffer.writeEnum(value.type)
         }
         
         
@@ -391,22 +404,63 @@ class RdOtelMetric (
         
         other as RdOtelMetric
         
+        if (name != other.name) return false
+        if (description != other.description) return false
+        if (unit != other.unit) return false
+        if (type != other.type) return false
         
         return true
     }
     //hash code trait
     override fun hashCode(): Int  {
         var __r = 0
+        __r = __r*31 + name.hashCode()
+        __r = __r*31 + description.hashCode()
+        __r = __r*31 + unit.hashCode()
+        __r = __r*31 + type.hashCode()
         return __r
     }
     //pretty print
     override fun print(printer: PrettyPrinter)  {
         printer.println("RdOtelMetric (")
+        printer.indent {
+            print("name = "); name.print(printer); println()
+            print("description = "); description.print(printer); println()
+            print("unit = "); unit.print(printer); println()
+            print("type = "); type.print(printer); println()
+        }
         printer.print(")")
     }
     //deepClone
     //contexts
     //threading
+}
+
+
+/**
+ * #### Generated from [AspireSessionHostModel.kt:160]
+ */
+enum class RdOtelMetricType {
+    Gauge, 
+    Sum, 
+    Histogram, 
+    Unknown;
+    
+    companion object : IMarshaller<RdOtelMetricType> {
+        val marshaller = FrameworkMarshallers.enum<RdOtelMetricType>()
+        
+        
+        override val _type: KClass<RdOtelMetricType> = RdOtelMetricType::class
+        override val id: RdId get() = RdId(-7888161660721341317)
+        
+        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): RdOtelMetricType {
+            return marshaller.read(ctx, buffer)
+        }
+        
+        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: RdOtelMetricType)  {
+            marshaller.write(ctx, buffer, value)
+        }
+    }
 }
 
 
@@ -480,7 +534,7 @@ data class RdOtelResource (
  */
 data class RdOtelResourceMetrics (
     val resource: RdOtelResource,
-    val metrics: RdOtelScopeMetrics
+    val scopeMetrics: Array<RdOtelScopeMetrics>
 ) : IPrintable {
     //companion
     
@@ -491,13 +545,13 @@ data class RdOtelResourceMetrics (
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): RdOtelResourceMetrics  {
             val resource = RdOtelResource.read(ctx, buffer)
-            val metrics = RdOtelScopeMetrics.read(ctx, buffer)
-            return RdOtelResourceMetrics(resource, metrics)
+            val scopeMetrics = buffer.readArray {RdOtelScopeMetrics.read(ctx, buffer)}
+            return RdOtelResourceMetrics(resource, scopeMetrics)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: RdOtelResourceMetrics)  {
             RdOtelResource.write(ctx, buffer, value.resource)
-            RdOtelScopeMetrics.write(ctx, buffer, value.metrics)
+            buffer.writeArray(value.scopeMetrics) { RdOtelScopeMetrics.write(ctx, buffer, it) }
         }
         
         
@@ -514,7 +568,7 @@ data class RdOtelResourceMetrics (
         other as RdOtelResourceMetrics
         
         if (resource != other.resource) return false
-        if (metrics != other.metrics) return false
+        if (!(scopeMetrics contentDeepEquals other.scopeMetrics)) return false
         
         return true
     }
@@ -522,7 +576,7 @@ data class RdOtelResourceMetrics (
     override fun hashCode(): Int  {
         var __r = 0
         __r = __r*31 + resource.hashCode()
-        __r = __r*31 + metrics.hashCode()
+        __r = __r*31 + scopeMetrics.contentDeepHashCode()
         return __r
     }
     //pretty print
@@ -530,7 +584,7 @@ data class RdOtelResourceMetrics (
         printer.println("RdOtelResourceMetrics (")
         printer.indent {
             print("resource = "); resource.print(printer); println()
-            print("metrics = "); metrics.print(printer); println()
+            print("scopeMetrics = "); scopeMetrics.print(printer); println()
         }
         printer.print(")")
     }
@@ -544,6 +598,7 @@ data class RdOtelResourceMetrics (
  * #### Generated from [AspireSessionHostModel.kt:151]
  */
 data class RdOtelScopeMetrics (
+    val scopeName: String,
     val metrics: Array<RdOtelMetric>
 ) : IPrintable {
     //companion
@@ -554,11 +609,13 @@ data class RdOtelScopeMetrics (
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): RdOtelScopeMetrics  {
+            val scopeName = buffer.readString()
             val metrics = buffer.readArray {RdOtelMetric.read(ctx, buffer)}
-            return RdOtelScopeMetrics(metrics)
+            return RdOtelScopeMetrics(scopeName, metrics)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: RdOtelScopeMetrics)  {
+            buffer.writeString(value.scopeName)
             buffer.writeArray(value.metrics) { RdOtelMetric.write(ctx, buffer, it) }
         }
         
@@ -575,6 +632,7 @@ data class RdOtelScopeMetrics (
         
         other as RdOtelScopeMetrics
         
+        if (scopeName != other.scopeName) return false
         if (!(metrics contentDeepEquals other.metrics)) return false
         
         return true
@@ -582,6 +640,7 @@ data class RdOtelScopeMetrics (
     //hash code trait
     override fun hashCode(): Int  {
         var __r = 0
+        __r = __r*31 + scopeName.hashCode()
         __r = __r*31 + metrics.contentDeepHashCode()
         return __r
     }
@@ -589,6 +648,7 @@ data class RdOtelScopeMetrics (
     override fun print(printer: PrettyPrinter)  {
         printer.println("RdOtelScopeMetrics (")
         printer.indent {
+            print("scopeName = "); scopeName.print(printer); println()
             print("metrics = "); metrics.print(printer); println()
         }
         printer.print(")")

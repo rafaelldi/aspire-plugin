@@ -2,6 +2,7 @@ using System.Threading.Channels;
 using AspireSessionHost.Generated;
 using JetBrains.Lifetimes;
 using OpenTelemetry.Proto.Collector.Metrics.V1;
+using OpenTelemetry.Proto.Metrics.V1;
 using OpenTelemetry.Proto.Resource.V1;
 
 namespace AspireSessionHost.OTel;
@@ -48,14 +49,24 @@ internal sealed class RdMetricService(Connection connection) : IDisposable
         foreach (var resourceMetrics in metricRequest.ResourceMetrics)
         {
             var rdResource = MapResource(resourceMetrics.Resource);
-            var rdMetrics = new RdOtelMetric[]{};
-            var rdScopeMetrics = new RdOtelScopeMetrics(rdMetrics);
-            var rdResourceMetrics = new RdOtelResourceMetrics(rdResource, rdScopeMetrics);
-
-            await connection.DoWithModel(model =>
+            var rdSCopeMetrics = new List<RdOtelScopeMetrics>(resourceMetrics.ScopeMetrics.Count);
+            foreach (var scopeMetrics in resourceMetrics.ScopeMetrics)
             {
-                model.MetricReceived(rdResourceMetrics);
-            });
+                var scopeName = scopeMetrics.Scope.Name;
+                var rdMetrics = new List<RdOtelMetric>(scopeMetrics.Metrics.Count);
+                foreach (var metric in scopeMetrics.Metrics)
+                {
+                    var rdMetric = MapMetric(metric);
+                    rdMetrics.Add(rdMetric);
+                }
+
+                var rdScopeMetrics = new RdOtelScopeMetrics(scopeName, rdMetrics.ToArray());
+                rdSCopeMetrics.Add(rdScopeMetrics);
+            }
+
+            var rdResourceMetrics = new RdOtelResourceMetrics(rdResource, rdSCopeMetrics.ToArray());
+
+            await connection.DoWithModel(model => { model.MetricReceived(rdResourceMetrics); });
         }
     }
 
@@ -64,6 +75,24 @@ internal sealed class RdMetricService(Connection connection) : IDisposable
         var (serviceName, serviceId) = resource.GetServiceIdAndName();
         return new RdOtelResource(serviceName, serviceId);
     }
+
+    private static RdOtelMetric MapMetric(Metric metric)
+    {
+        return new RdOtelMetric(
+            metric.Name,
+            metric.Description,
+            metric.Unit,
+            MapMetricType(metric)
+        );
+    }
+
+    private static RdOtelMetricType MapMetricType(Metric metric) => metric.DataCase switch
+    {
+        Metric.DataOneofCase.Gauge => RdOtelMetricType.Gauge,
+        Metric.DataOneofCase.Sum => RdOtelMetricType.Sum,
+        Metric.DataOneofCase.Histogram => RdOtelMetricType.Histogram,
+        _ => RdOtelMetricType.Unknown
+    };
 
     public void Dispose()
     {

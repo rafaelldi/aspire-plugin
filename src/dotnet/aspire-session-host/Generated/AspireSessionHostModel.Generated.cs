@@ -121,7 +121,7 @@ namespace AspireSessionHost.Generated
     public static  CtxWriteDelegate<SessionCreationResult> WriteSessionCreationResultNullable = SessionCreationResult.Write.NullableClass();
     public static  CtxWriteDelegate<TraceNode[]> WriteTraceNodeArray = TraceNode.Write.Array();
     
-    protected override long SerializationHash => 7965243802201276607L;
+    protected override long SerializationHash => 3231006369673669600L;
     
     protected override Action<ISerializers> Register => RegisterDeclaredTypesSerializers;
     public static void RegisterDeclaredTypesSerializers(ISerializers serializers)
@@ -457,27 +457,62 @@ namespace AspireSessionHost.Generated
   
   
   /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:155</p>
+  /// <p>Generated from: AspireSessionHostModel.kt:156</p>
   /// </summary>
   public sealed class RdOtelMetric : IPrintable, IEquatable<RdOtelMetric>
   {
     //fields
     //public fields
+    [NotNull] public string Name {get; private set;}
+    [NotNull] public string Description {get; private set;}
+    [NotNull] public string Unit {get; private set;}
+    public RdOtelMetricType Type {get; private set;}
     
     //private fields
     //primary constructor
+    public RdOtelMetric(
+      [NotNull] string name,
+      [NotNull] string description,
+      [NotNull] string unit,
+      RdOtelMetricType type
+    )
+    {
+      if (name == null) throw new ArgumentNullException("name");
+      if (description == null) throw new ArgumentNullException("description");
+      if (unit == null) throw new ArgumentNullException("unit");
+      
+      Name = name;
+      Description = description;
+      Unit = unit;
+      Type = type;
+    }
     //secondary constructor
     //deconstruct trait
+    public void Deconstruct([NotNull] out string name, [NotNull] out string description, [NotNull] out string unit, out RdOtelMetricType type)
+    {
+      name = Name;
+      description = Description;
+      unit = Unit;
+      type = Type;
+    }
     //statics
     
     public static CtxReadDelegate<RdOtelMetric> Read = (ctx, reader) => 
     {
-      var _result = new RdOtelMetric();
+      var name = reader.ReadString();
+      var description = reader.ReadString();
+      var unit = reader.ReadString();
+      var type = (RdOtelMetricType)reader.ReadInt();
+      var _result = new RdOtelMetric(name, description, unit, type);
       return _result;
     };
     
     public static CtxWriteDelegate<RdOtelMetric> Write = (ctx, writer, value) => 
     {
+      writer.Write(value.Name);
+      writer.Write(value.Description);
+      writer.Write(value.Unit);
+      writer.Write((int)value.Type);
     };
     
     //constants
@@ -496,13 +531,17 @@ namespace AspireSessionHost.Generated
     {
       if (ReferenceEquals(null, other)) return false;
       if (ReferenceEquals(this, other)) return true;
-      return true;
+      return Name == other.Name && Description == other.Description && Unit == other.Unit && Type == other.Type;
     }
     //hash code trait
     public override int GetHashCode()
     {
       unchecked {
         var hash = 0;
+        hash = hash * 31 + Name.GetHashCode();
+        hash = hash * 31 + Description.GetHashCode();
+        hash = hash * 31 + Unit.GetHashCode();
+        hash = hash * 31 + (int) Type;
         return hash;
       }
     }
@@ -510,6 +549,12 @@ namespace AspireSessionHost.Generated
     public void Print(PrettyPrinter printer)
     {
       printer.Println("RdOtelMetric (");
+      using (printer.IndentCookie()) {
+        printer.Print("name = "); Name.PrintEx(printer); printer.Println();
+        printer.Print("description = "); Description.PrintEx(printer); printer.Println();
+        printer.Print("unit = "); Unit.PrintEx(printer); printer.Println();
+        printer.Print("type = "); Type.PrintEx(printer); printer.Println();
+      }
       printer.Print(")");
     }
     //toString
@@ -519,6 +564,17 @@ namespace AspireSessionHost.Generated
       Print(printer);
       return printer.ToString();
     }
+  }
+  
+  
+  /// <summary>
+  /// <p>Generated from: AspireSessionHostModel.kt:160</p>
+  /// </summary>
+  public enum RdOtelMetricType {
+    Gauge,
+    Sum,
+    Histogram,
+    Unknown
   }
   
   
@@ -625,43 +681,45 @@ namespace AspireSessionHost.Generated
     //fields
     //public fields
     [NotNull] public RdOtelResource Resource {get; private set;}
-    [NotNull] public RdOtelScopeMetrics Metrics {get; private set;}
+    [NotNull] public RdOtelScopeMetrics[] ScopeMetrics {get; private set;}
     
     //private fields
     //primary constructor
     public RdOtelResourceMetrics(
       [NotNull] RdOtelResource resource,
-      [NotNull] RdOtelScopeMetrics metrics
+      [NotNull] RdOtelScopeMetrics[] scopeMetrics
     )
     {
       if (resource == null) throw new ArgumentNullException("resource");
-      if (metrics == null) throw new ArgumentNullException("metrics");
+      if (scopeMetrics == null) throw new ArgumentNullException("scopeMetrics");
       
       Resource = resource;
-      Metrics = metrics;
+      ScopeMetrics = scopeMetrics;
     }
     //secondary constructor
     //deconstruct trait
-    public void Deconstruct([NotNull] out RdOtelResource resource, [NotNull] out RdOtelScopeMetrics metrics)
+    public void Deconstruct([NotNull] out RdOtelResource resource, [NotNull] out RdOtelScopeMetrics[] scopeMetrics)
     {
       resource = Resource;
-      metrics = Metrics;
+      scopeMetrics = ScopeMetrics;
     }
     //statics
     
     public static CtxReadDelegate<RdOtelResourceMetrics> Read = (ctx, reader) => 
     {
       var resource = RdOtelResource.Read(ctx, reader);
-      var metrics = RdOtelScopeMetrics.Read(ctx, reader);
-      var _result = new RdOtelResourceMetrics(resource, metrics);
+      var scopeMetrics = ReadRdOtelScopeMetricsArray(ctx, reader);
+      var _result = new RdOtelResourceMetrics(resource, scopeMetrics);
       return _result;
     };
+    public static CtxReadDelegate<RdOtelScopeMetrics[]> ReadRdOtelScopeMetricsArray = RdOtelScopeMetrics.Read.Array();
     
     public static CtxWriteDelegate<RdOtelResourceMetrics> Write = (ctx, writer, value) => 
     {
       RdOtelResource.Write(ctx, writer, value.Resource);
-      RdOtelScopeMetrics.Write(ctx, writer, value.Metrics);
+      WriteRdOtelScopeMetricsArray(ctx, writer, value.ScopeMetrics);
     };
+    public static  CtxWriteDelegate<RdOtelScopeMetrics[]> WriteRdOtelScopeMetricsArray = RdOtelScopeMetrics.Write.Array();
     
     //constants
     
@@ -679,7 +737,7 @@ namespace AspireSessionHost.Generated
     {
       if (ReferenceEquals(null, other)) return false;
       if (ReferenceEquals(this, other)) return true;
-      return Equals(Resource, other.Resource) && Equals(Metrics, other.Metrics);
+      return Equals(Resource, other.Resource) && ScopeMetrics.SequenceEqual(other.ScopeMetrics);
     }
     //hash code trait
     public override int GetHashCode()
@@ -687,7 +745,7 @@ namespace AspireSessionHost.Generated
       unchecked {
         var hash = 0;
         hash = hash * 31 + Resource.GetHashCode();
-        hash = hash * 31 + Metrics.GetHashCode();
+        hash = hash * 31 + ScopeMetrics.ContentHashCode();
         return hash;
       }
     }
@@ -697,7 +755,7 @@ namespace AspireSessionHost.Generated
       printer.Println("RdOtelResourceMetrics (");
       using (printer.IndentCookie()) {
         printer.Print("resource = "); Resource.PrintEx(printer); printer.Println();
-        printer.Print("metrics = "); Metrics.PrintEx(printer); printer.Println();
+        printer.Print("scopeMetrics = "); ScopeMetrics.PrintEx(printer); printer.Println();
       }
       printer.Print(")");
     }
@@ -718,36 +776,43 @@ namespace AspireSessionHost.Generated
   {
     //fields
     //public fields
+    [NotNull] public string ScopeName {get; private set;}
     [NotNull] public RdOtelMetric[] Metrics {get; private set;}
     
     //private fields
     //primary constructor
     public RdOtelScopeMetrics(
+      [NotNull] string scopeName,
       [NotNull] RdOtelMetric[] metrics
     )
     {
+      if (scopeName == null) throw new ArgumentNullException("scopeName");
       if (metrics == null) throw new ArgumentNullException("metrics");
       
+      ScopeName = scopeName;
       Metrics = metrics;
     }
     //secondary constructor
     //deconstruct trait
-    public void Deconstruct([NotNull] out RdOtelMetric[] metrics)
+    public void Deconstruct([NotNull] out string scopeName, [NotNull] out RdOtelMetric[] metrics)
     {
+      scopeName = ScopeName;
       metrics = Metrics;
     }
     //statics
     
     public static CtxReadDelegate<RdOtelScopeMetrics> Read = (ctx, reader) => 
     {
+      var scopeName = reader.ReadString();
       var metrics = ReadRdOtelMetricArray(ctx, reader);
-      var _result = new RdOtelScopeMetrics(metrics);
+      var _result = new RdOtelScopeMetrics(scopeName, metrics);
       return _result;
     };
     public static CtxReadDelegate<RdOtelMetric[]> ReadRdOtelMetricArray = RdOtelMetric.Read.Array();
     
     public static CtxWriteDelegate<RdOtelScopeMetrics> Write = (ctx, writer, value) => 
     {
+      writer.Write(value.ScopeName);
       WriteRdOtelMetricArray(ctx, writer, value.Metrics);
     };
     public static  CtxWriteDelegate<RdOtelMetric[]> WriteRdOtelMetricArray = RdOtelMetric.Write.Array();
@@ -768,13 +833,14 @@ namespace AspireSessionHost.Generated
     {
       if (ReferenceEquals(null, other)) return false;
       if (ReferenceEquals(this, other)) return true;
-      return Metrics.SequenceEqual(other.Metrics);
+      return ScopeName == other.ScopeName && Metrics.SequenceEqual(other.Metrics);
     }
     //hash code trait
     public override int GetHashCode()
     {
       unchecked {
         var hash = 0;
+        hash = hash * 31 + ScopeName.GetHashCode();
         hash = hash * 31 + Metrics.ContentHashCode();
         return hash;
       }
@@ -784,6 +850,7 @@ namespace AspireSessionHost.Generated
     {
       printer.Println("RdOtelScopeMetrics (");
       using (printer.IndentCookie()) {
+        printer.Print("scopeName = "); ScopeName.PrintEx(printer); printer.Println();
         printer.Print("metrics = "); Metrics.PrintEx(printer); printer.Println();
       }
       printer.Print(")");

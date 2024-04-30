@@ -145,14 +145,24 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
 
     private val RdOtelResourceMetrics = structdef {
         field("resource", RdOtelResource)
-        field("metrics", RdOtelScopeMetrics)
+        field("scopeMetrics", array(RdOtelScopeMetrics))
     }
 
     private val RdOtelScopeMetrics = structdef {
+        field("scopeName", string)
         field("metrics", array(RdOtelMetric))
     }
 
     private val RdOtelMetric = structdef {
+        field("name", string)
+        field("description", string)
+        field("unit", string)
+        field("type", enum("RdOtelMetricType") {
+            +"Gauge"
+            +"Sum"
+            +"Histogram"
+            +"Unknown"
+        })
     }
 
     init {

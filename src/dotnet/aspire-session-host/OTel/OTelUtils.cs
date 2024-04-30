@@ -25,7 +25,7 @@ internal static class OTelUtils
     
     internal static (string serviceName, string? serviceId) GetServiceIdAndName(this Resource resource)
     {
-        var serviceName = "";
+        var serviceName = "Unknown";
         string? serviceId = null;
 
         foreach (var attribute in resource.Attributes)
