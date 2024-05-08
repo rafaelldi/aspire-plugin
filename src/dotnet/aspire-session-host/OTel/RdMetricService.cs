@@ -1,13 +1,10 @@
 using System.Threading.Channels;
-using AspireSessionHost.Generated;
 using JetBrains.Lifetimes;
 using OpenTelemetry.Proto.Collector.Metrics.V1;
-using OpenTelemetry.Proto.Metrics.V1;
-using OpenTelemetry.Proto.Resource.V1;
 
 namespace AspireSessionHost.OTel;
 
-internal sealed class RdMetricService(Connection connection) : IDisposable
+internal sealed class RdMetricService(RdResourceManager resourceManager) : IDisposable
 {
     private readonly LifetimeDefinition _lifetimeDef = new();
 
@@ -35,7 +32,7 @@ internal sealed class RdMetricService(Connection connection) : IDisposable
         {
             await foreach (var metric in _channel.Reader.ReadAllAsync(Lifetime.AsyncLocal.Value))
             {
-                await ConsumeMetric(metric);
+                ConsumeMetric(metric);
             }
         }
         catch (OperationCanceledException)
@@ -44,55 +41,15 @@ internal sealed class RdMetricService(Connection connection) : IDisposable
         }
     }
 
-    private async Task ConsumeMetric(ExportMetricsServiceRequest metricRequest)
+    private void ConsumeMetric(ExportMetricsServiceRequest metricRequest)
     {
         foreach (var resourceMetrics in metricRequest.ResourceMetrics)
         {
-            var rdResource = MapResource(resourceMetrics.Resource);
-            var rdSCopeMetrics = new List<RdOtelScopeMetrics>(resourceMetrics.ScopeMetrics.Count);
-            foreach (var scopeMetrics in resourceMetrics.ScopeMetrics)
-            {
-                var scopeName = scopeMetrics.Scope.Name;
-                var rdMetrics = new List<RdOtelMetric>(scopeMetrics.Metrics.Count);
-                foreach (var metric in scopeMetrics.Metrics)
-                {
-                    var rdMetric = MapMetric(metric);
-                    rdMetrics.Add(rdMetric);
-                }
-
-                var rdScopeMetrics = new RdOtelScopeMetrics(scopeName, rdMetrics.ToArray());
-                rdSCopeMetrics.Add(rdScopeMetrics);
-            }
-
-            var rdResourceMetrics = new RdOtelResourceMetrics(rdResource, rdSCopeMetrics.ToArray());
-
-            await connection.DoWithModel(model => { model.MetricReceived(rdResourceMetrics); });
+            var (serviceName, serviceId) = resourceMetrics.Resource.GetServiceIdAndName();
+            var resource = resourceManager.GetOrAddResource(serviceName, serviceId);
+            resource.AddMetrics(resourceMetrics.ScopeMetrics);
         }
     }
-
-    private static RdOtelResource MapResource(Resource resource)
-    {
-        var (serviceName, serviceId) = resource.GetServiceIdAndName();
-        return new RdOtelResource(serviceName, serviceId);
-    }
-
-    private static RdOtelMetric MapMetric(Metric metric)
-    {
-        return new RdOtelMetric(
-            metric.Name,
-            metric.Description,
-            metric.Unit,
-            MapMetricType(metric)
-        );
-    }
-
-    private static RdOtelMetricType MapMetricType(Metric metric) => metric.DataCase switch
-    {
-        Metric.DataOneofCase.Gauge => RdOtelMetricType.Gauge,
-        Metric.DataOneofCase.Sum => RdOtelMetricType.Sum,
-        Metric.DataOneofCase.Histogram => RdOtelMetricType.Histogram,
-        _ => RdOtelMetricType.Unknown
-    };
 
     public void Dispose()
     {

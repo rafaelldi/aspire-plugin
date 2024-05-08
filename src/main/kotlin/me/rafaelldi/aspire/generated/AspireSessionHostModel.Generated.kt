@@ -25,8 +25,7 @@ class AspireSessionHostModel private constructor(
     private val _processTerminated: RdSignal<ProcessTerminated>,
     private val _logReceived: RdSignal<LogReceived>,
     private val _resources: RdMap<String, ResourceWrapper>,
-    private val _getTraceNodes: RdCall<Unit, Array<TraceNode>>,
-    private val _metricReceived: RdSignal<RdOtelResourceMetrics>
+    private val _getTraceNodes: RdCall<Unit, Array<TraceNode>>
 ) : RdExtBase() {
     //companion
     
@@ -50,14 +49,9 @@ class AspireSessionHostModel private constructor(
             serializers.register(LazyCompanionMarshaller(RdId(577221124058644), classLoader, "me.rafaelldi.aspire.generated.TraceNode"))
             serializers.register(LazyCompanionMarshaller(RdId(-2931968979041238168), classLoader, "me.rafaelldi.aspire.generated.TraceNodeChild"))
             serializers.register(LazyCompanionMarshaller(RdId(7298853094950171368), classLoader, "me.rafaelldi.aspire.generated.TraceNodeAttribute"))
-            serializers.register(LazyCompanionMarshaller(RdId(-7897502438904322113), classLoader, "me.rafaelldi.aspire.generated.RdOtelResource"))
-            serializers.register(LazyCompanionMarshaller(RdId(-830135311244440572), classLoader, "me.rafaelldi.aspire.generated.RdOtelResourceMetrics"))
-            serializers.register(LazyCompanionMarshaller(RdId(1239135913234904832), classLoader, "me.rafaelldi.aspire.generated.RdOtelScopeMetrics"))
-            serializers.register(LazyCompanionMarshaller(RdId(-1313502705087082079), classLoader, "me.rafaelldi.aspire.generated.RdOtelMetric"))
             serializers.register(LazyCompanionMarshaller(RdId(-1311735068701761509), classLoader, "me.rafaelldi.aspire.generated.ResourceType"))
             serializers.register(LazyCompanionMarshaller(RdId(-3770298982336589872), classLoader, "me.rafaelldi.aspire.generated.ResourceState"))
             serializers.register(LazyCompanionMarshaller(RdId(-15935776453165119), classLoader, "me.rafaelldi.aspire.generated.ResourceStateStyle"))
-            serializers.register(LazyCompanionMarshaller(RdId(-7888161660721341317), classLoader, "me.rafaelldi.aspire.generated.RdOtelMetricType"))
         }
         
         
@@ -80,7 +74,7 @@ class AspireSessionHostModel private constructor(
         private val __SessionCreationResultNullableSerializer = SessionCreationResult.nullable()
         private val __TraceNodeArraySerializer = TraceNode.array()
         
-        const val serializationHash = 3231006369673669600L
+        const val serializationHash = 7665665775754562140L
         
     }
     override val serializersOwner: ISerializersOwner get() = AspireSessionHostModel
@@ -94,7 +88,6 @@ class AspireSessionHostModel private constructor(
     val logReceived: ISignal<LogReceived> get() = _logReceived
     val resources: IMutableViewableMap<String, ResourceWrapper> get() = _resources
     val getTraceNodes: IRdCall<Unit, Array<TraceNode>> get() = _getTraceNodes
-    val metricReceived: ISource<RdOtelResourceMetrics> get() = _metricReceived
     //methods
     //initializer
     init {
@@ -105,7 +98,6 @@ class AspireSessionHostModel private constructor(
         bindableChildren.add("logReceived" to _logReceived)
         bindableChildren.add("resources" to _resources)
         bindableChildren.add("getTraceNodes" to _getTraceNodes)
-        bindableChildren.add("metricReceived" to _metricReceived)
     }
     
     //secondary constructor
@@ -117,8 +109,7 @@ class AspireSessionHostModel private constructor(
         RdSignal<ProcessTerminated>(ProcessTerminated),
         RdSignal<LogReceived>(LogReceived),
         RdMap<String, ResourceWrapper>(FrameworkMarshallers.String, ResourceWrapper),
-        RdCall<Unit, Array<TraceNode>>(FrameworkMarshallers.Void, __TraceNodeArraySerializer),
-        RdSignal<RdOtelResourceMetrics>(RdOtelResourceMetrics)
+        RdCall<Unit, Array<TraceNode>>(FrameworkMarshallers.Void, __TraceNodeArraySerializer)
     )
     
     //equals trait
@@ -134,7 +125,6 @@ class AspireSessionHostModel private constructor(
             print("logReceived = "); _logReceived.print(printer); println()
             print("resources = "); _resources.print(printer); println()
             print("getTraceNodes = "); _getTraceNodes.print(printer); println()
-            print("metricReceived = "); _metricReceived.print(printer); println()
         }
         printer.print(")")
     }
@@ -147,8 +137,7 @@ class AspireSessionHostModel private constructor(
             _processTerminated.deepClonePolymorphic(),
             _logReceived.deepClonePolymorphic(),
             _resources.deepClonePolymorphic(),
-            _getTraceNodes.deepClonePolymorphic(),
-            _metricReceived.deepClonePolymorphic()
+            _getTraceNodes.deepClonePolymorphic()
         )
     }
     //contexts
@@ -351,305 +340,6 @@ data class ProcessTerminated (
         printer.indent {
             print("id = "); id.print(printer); println()
             print("exitCode = "); exitCode.print(printer); println()
-        }
-        printer.print(")")
-    }
-    //deepClone
-    //contexts
-    //threading
-}
-
-
-/**
- * #### Generated from [AspireSessionHostModel.kt:156]
- */
-data class RdOtelMetric (
-    val name: String,
-    val description: String,
-    val unit: String,
-    val type: RdOtelMetricType
-) : IPrintable {
-    //companion
-    
-    companion object : IMarshaller<RdOtelMetric> {
-        override val _type: KClass<RdOtelMetric> = RdOtelMetric::class
-        override val id: RdId get() = RdId(-1313502705087082079)
-        
-        @Suppress("UNCHECKED_CAST")
-        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): RdOtelMetric  {
-            val name = buffer.readString()
-            val description = buffer.readString()
-            val unit = buffer.readString()
-            val type = buffer.readEnum<RdOtelMetricType>()
-            return RdOtelMetric(name, description, unit, type)
-        }
-        
-        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: RdOtelMetric)  {
-            buffer.writeString(value.name)
-            buffer.writeString(value.description)
-            buffer.writeString(value.unit)
-            buffer.writeEnum(value.type)
-        }
-        
-        
-    }
-    //fields
-    //methods
-    //initializer
-    //secondary constructor
-    //equals trait
-    override fun equals(other: Any?): Boolean  {
-        if (this === other) return true
-        if (other == null || other::class != this::class) return false
-        
-        other as RdOtelMetric
-        
-        if (name != other.name) return false
-        if (description != other.description) return false
-        if (unit != other.unit) return false
-        if (type != other.type) return false
-        
-        return true
-    }
-    //hash code trait
-    override fun hashCode(): Int  {
-        var __r = 0
-        __r = __r*31 + name.hashCode()
-        __r = __r*31 + description.hashCode()
-        __r = __r*31 + unit.hashCode()
-        __r = __r*31 + type.hashCode()
-        return __r
-    }
-    //pretty print
-    override fun print(printer: PrettyPrinter)  {
-        printer.println("RdOtelMetric (")
-        printer.indent {
-            print("name = "); name.print(printer); println()
-            print("description = "); description.print(printer); println()
-            print("unit = "); unit.print(printer); println()
-            print("type = "); type.print(printer); println()
-        }
-        printer.print(")")
-    }
-    //deepClone
-    //contexts
-    //threading
-}
-
-
-/**
- * #### Generated from [AspireSessionHostModel.kt:160]
- */
-enum class RdOtelMetricType {
-    Gauge, 
-    Sum, 
-    Histogram, 
-    Unknown;
-    
-    companion object : IMarshaller<RdOtelMetricType> {
-        val marshaller = FrameworkMarshallers.enum<RdOtelMetricType>()
-        
-        
-        override val _type: KClass<RdOtelMetricType> = RdOtelMetricType::class
-        override val id: RdId get() = RdId(-7888161660721341317)
-        
-        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): RdOtelMetricType {
-            return marshaller.read(ctx, buffer)
-        }
-        
-        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: RdOtelMetricType)  {
-            marshaller.write(ctx, buffer, value)
-        }
-    }
-}
-
-
-/**
- * #### Generated from [AspireSessionHostModel.kt:141]
- */
-data class RdOtelResource (
-    val serviceName: String,
-    val serviceInstanceId: String?
-) : IPrintable {
-    //companion
-    
-    companion object : IMarshaller<RdOtelResource> {
-        override val _type: KClass<RdOtelResource> = RdOtelResource::class
-        override val id: RdId get() = RdId(-7897502438904322113)
-        
-        @Suppress("UNCHECKED_CAST")
-        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): RdOtelResource  {
-            val serviceName = buffer.readString()
-            val serviceInstanceId = buffer.readNullable { buffer.readString() }
-            return RdOtelResource(serviceName, serviceInstanceId)
-        }
-        
-        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: RdOtelResource)  {
-            buffer.writeString(value.serviceName)
-            buffer.writeNullable(value.serviceInstanceId) { buffer.writeString(it) }
-        }
-        
-        
-    }
-    //fields
-    //methods
-    //initializer
-    //secondary constructor
-    //equals trait
-    override fun equals(other: Any?): Boolean  {
-        if (this === other) return true
-        if (other == null || other::class != this::class) return false
-        
-        other as RdOtelResource
-        
-        if (serviceName != other.serviceName) return false
-        if (serviceInstanceId != other.serviceInstanceId) return false
-        
-        return true
-    }
-    //hash code trait
-    override fun hashCode(): Int  {
-        var __r = 0
-        __r = __r*31 + serviceName.hashCode()
-        __r = __r*31 + if (serviceInstanceId != null) serviceInstanceId.hashCode() else 0
-        return __r
-    }
-    //pretty print
-    override fun print(printer: PrettyPrinter)  {
-        printer.println("RdOtelResource (")
-        printer.indent {
-            print("serviceName = "); serviceName.print(printer); println()
-            print("serviceInstanceId = "); serviceInstanceId.print(printer); println()
-        }
-        printer.print(")")
-    }
-    //deepClone
-    //contexts
-    //threading
-}
-
-
-/**
- * #### Generated from [AspireSessionHostModel.kt:146]
- */
-data class RdOtelResourceMetrics (
-    val resource: RdOtelResource,
-    val scopeMetrics: Array<RdOtelScopeMetrics>
-) : IPrintable {
-    //companion
-    
-    companion object : IMarshaller<RdOtelResourceMetrics> {
-        override val _type: KClass<RdOtelResourceMetrics> = RdOtelResourceMetrics::class
-        override val id: RdId get() = RdId(-830135311244440572)
-        
-        @Suppress("UNCHECKED_CAST")
-        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): RdOtelResourceMetrics  {
-            val resource = RdOtelResource.read(ctx, buffer)
-            val scopeMetrics = buffer.readArray {RdOtelScopeMetrics.read(ctx, buffer)}
-            return RdOtelResourceMetrics(resource, scopeMetrics)
-        }
-        
-        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: RdOtelResourceMetrics)  {
-            RdOtelResource.write(ctx, buffer, value.resource)
-            buffer.writeArray(value.scopeMetrics) { RdOtelScopeMetrics.write(ctx, buffer, it) }
-        }
-        
-        
-    }
-    //fields
-    //methods
-    //initializer
-    //secondary constructor
-    //equals trait
-    override fun equals(other: Any?): Boolean  {
-        if (this === other) return true
-        if (other == null || other::class != this::class) return false
-        
-        other as RdOtelResourceMetrics
-        
-        if (resource != other.resource) return false
-        if (!(scopeMetrics contentDeepEquals other.scopeMetrics)) return false
-        
-        return true
-    }
-    //hash code trait
-    override fun hashCode(): Int  {
-        var __r = 0
-        __r = __r*31 + resource.hashCode()
-        __r = __r*31 + scopeMetrics.contentDeepHashCode()
-        return __r
-    }
-    //pretty print
-    override fun print(printer: PrettyPrinter)  {
-        printer.println("RdOtelResourceMetrics (")
-        printer.indent {
-            print("resource = "); resource.print(printer); println()
-            print("scopeMetrics = "); scopeMetrics.print(printer); println()
-        }
-        printer.print(")")
-    }
-    //deepClone
-    //contexts
-    //threading
-}
-
-
-/**
- * #### Generated from [AspireSessionHostModel.kt:151]
- */
-data class RdOtelScopeMetrics (
-    val scopeName: String,
-    val metrics: Array<RdOtelMetric>
-) : IPrintable {
-    //companion
-    
-    companion object : IMarshaller<RdOtelScopeMetrics> {
-        override val _type: KClass<RdOtelScopeMetrics> = RdOtelScopeMetrics::class
-        override val id: RdId get() = RdId(1239135913234904832)
-        
-        @Suppress("UNCHECKED_CAST")
-        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): RdOtelScopeMetrics  {
-            val scopeName = buffer.readString()
-            val metrics = buffer.readArray {RdOtelMetric.read(ctx, buffer)}
-            return RdOtelScopeMetrics(scopeName, metrics)
-        }
-        
-        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: RdOtelScopeMetrics)  {
-            buffer.writeString(value.scopeName)
-            buffer.writeArray(value.metrics) { RdOtelMetric.write(ctx, buffer, it) }
-        }
-        
-        
-    }
-    //fields
-    //methods
-    //initializer
-    //secondary constructor
-    //equals trait
-    override fun equals(other: Any?): Boolean  {
-        if (this === other) return true
-        if (other == null || other::class != this::class) return false
-        
-        other as RdOtelScopeMetrics
-        
-        if (scopeName != other.scopeName) return false
-        if (!(metrics contentDeepEquals other.metrics)) return false
-        
-        return true
-    }
-    //hash code trait
-    override fun hashCode(): Int  {
-        var __r = 0
-        __r = __r*31 + scopeName.hashCode()
-        __r = __r*31 + metrics.contentDeepHashCode()
-        return __r
-    }
-    //pretty print
-    override fun print(printer: PrettyPrinter)  {
-        printer.println("RdOtelScopeMetrics (")
-        printer.indent {
-            print("scopeName = "); scopeName.print(printer); println()
-            print("metrics = "); metrics.print(printer); println()
         }
         printer.print(")")
     }

@@ -25,6 +25,7 @@ internal static class OTelServiceRegistration
         services.AddSingleton<SessionNodeService>();
 
         services.AddSingleton<RdMetricService>();
+        services.AddSingleton<RdResourceManager>();
     }
 
     internal static async Task InitializeOTelServices(this IServiceProvider services)

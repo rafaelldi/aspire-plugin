@@ -49,7 +49,6 @@ namespace AspireSessionHost.Generated
     [NotNull] public ISource<AspireSessionHost.Generated.LogReceived> LogReceived => _LogReceived;
     [NotNull] public IViewableMap<string, ResourceWrapper> Resources => _Resources;
     [NotNull] public IRdEndpoint<Unit, TraceNode[]> GetTraceNodes => _GetTraceNodes;
-    [NotNull] public void MetricReceived(RdOtelResourceMetrics value) => _MetricReceived.Fire(value);
     
     //private fields
     [NotNull] private readonly RdCall<SessionModel, SessionCreationResult> _CreateSession;
@@ -59,7 +58,6 @@ namespace AspireSessionHost.Generated
     [NotNull] private readonly RdSignal<AspireSessionHost.Generated.LogReceived> _LogReceived;
     [NotNull] private readonly RdMap<string, ResourceWrapper> _Resources;
     [NotNull] private readonly RdCall<Unit, TraceNode[]> _GetTraceNodes;
-    [NotNull] private readonly RdSignal<RdOtelResourceMetrics> _MetricReceived;
     
     //primary constructor
     private AspireSessionHostModel(
@@ -69,8 +67,7 @@ namespace AspireSessionHost.Generated
       [NotNull] RdSignal<AspireSessionHost.Generated.ProcessTerminated> processTerminated,
       [NotNull] RdSignal<AspireSessionHost.Generated.LogReceived> logReceived,
       [NotNull] RdMap<string, ResourceWrapper> resources,
-      [NotNull] RdCall<Unit, TraceNode[]> getTraceNodes,
-      [NotNull] RdSignal<RdOtelResourceMetrics> metricReceived
+      [NotNull] RdCall<Unit, TraceNode[]> getTraceNodes
     )
     {
       if (createSession == null) throw new ArgumentNullException("createSession");
@@ -80,7 +77,6 @@ namespace AspireSessionHost.Generated
       if (logReceived == null) throw new ArgumentNullException("logReceived");
       if (resources == null) throw new ArgumentNullException("resources");
       if (getTraceNodes == null) throw new ArgumentNullException("getTraceNodes");
-      if (metricReceived == null) throw new ArgumentNullException("metricReceived");
       
       _CreateSession = createSession;
       _DeleteSession = deleteSession;
@@ -89,7 +85,6 @@ namespace AspireSessionHost.Generated
       _LogReceived = logReceived;
       _Resources = resources;
       _GetTraceNodes = getTraceNodes;
-      _MetricReceived = metricReceived;
       _CreateSession.ValueCanBeNull = true;
       BindableChildren.Add(new KeyValuePair<string, object>("createSession", _CreateSession));
       BindableChildren.Add(new KeyValuePair<string, object>("deleteSession", _DeleteSession));
@@ -98,7 +93,6 @@ namespace AspireSessionHost.Generated
       BindableChildren.Add(new KeyValuePair<string, object>("logReceived", _LogReceived));
       BindableChildren.Add(new KeyValuePair<string, object>("resources", _Resources));
       BindableChildren.Add(new KeyValuePair<string, object>("getTraceNodes", _GetTraceNodes));
-      BindableChildren.Add(new KeyValuePair<string, object>("metricReceived", _MetricReceived));
     }
     //secondary constructor
     private AspireSessionHostModel (
@@ -109,8 +103,7 @@ namespace AspireSessionHost.Generated
       new RdSignal<AspireSessionHost.Generated.ProcessTerminated>(AspireSessionHost.Generated.ProcessTerminated.Read, AspireSessionHost.Generated.ProcessTerminated.Write),
       new RdSignal<AspireSessionHost.Generated.LogReceived>(AspireSessionHost.Generated.LogReceived.Read, AspireSessionHost.Generated.LogReceived.Write),
       new RdMap<string, ResourceWrapper>(JetBrains.Rd.Impl.Serializers.ReadString, JetBrains.Rd.Impl.Serializers.WriteString, ResourceWrapper.Read, ResourceWrapper.Write),
-      new RdCall<Unit, TraceNode[]>(JetBrains.Rd.Impl.Serializers.ReadVoid, JetBrains.Rd.Impl.Serializers.WriteVoid, ReadTraceNodeArray, WriteTraceNodeArray),
-      new RdSignal<RdOtelResourceMetrics>(RdOtelResourceMetrics.Read, RdOtelResourceMetrics.Write)
+      new RdCall<Unit, TraceNode[]>(JetBrains.Rd.Impl.Serializers.ReadVoid, JetBrains.Rd.Impl.Serializers.WriteVoid, ReadTraceNodeArray, WriteTraceNodeArray)
     ) {}
     //deconstruct trait
     //statics
@@ -121,7 +114,7 @@ namespace AspireSessionHost.Generated
     public static  CtxWriteDelegate<SessionCreationResult> WriteSessionCreationResultNullable = SessionCreationResult.Write.NullableClass();
     public static  CtxWriteDelegate<TraceNode[]> WriteTraceNodeArray = TraceNode.Write.Array();
     
-    protected override long SerializationHash => 3231006369673669600L;
+    protected override long SerializationHash => 7665665775754562140L;
     
     protected override Action<ISerializers> Register => RegisterDeclaredTypesSerializers;
     public static void RegisterDeclaredTypesSerializers(ISerializers serializers)
@@ -154,7 +147,6 @@ namespace AspireSessionHost.Generated
         printer.Print("logReceived = "); _LogReceived.PrintEx(printer); printer.Println();
         printer.Print("resources = "); _Resources.PrintEx(printer); printer.Println();
         printer.Print("getTraceNodes = "); _GetTraceNodes.PrintEx(printer); printer.Println();
-        printer.Print("metricReceived = "); _MetricReceived.PrintEx(printer); printer.Println();
       }
       printer.Print(")");
     }
@@ -443,415 +435,6 @@ namespace AspireSessionHost.Generated
       using (printer.IndentCookie()) {
         printer.Print("id = "); Id.PrintEx(printer); printer.Println();
         printer.Print("exitCode = "); ExitCode.PrintEx(printer); printer.Println();
-      }
-      printer.Print(")");
-    }
-    //toString
-    public override string ToString()
-    {
-      var printer = new SingleLinePrettyPrinter();
-      Print(printer);
-      return printer.ToString();
-    }
-  }
-  
-  
-  /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:156</p>
-  /// </summary>
-  public sealed class RdOtelMetric : IPrintable, IEquatable<RdOtelMetric>
-  {
-    //fields
-    //public fields
-    [NotNull] public string Name {get; private set;}
-    [NotNull] public string Description {get; private set;}
-    [NotNull] public string Unit {get; private set;}
-    public RdOtelMetricType Type {get; private set;}
-    
-    //private fields
-    //primary constructor
-    public RdOtelMetric(
-      [NotNull] string name,
-      [NotNull] string description,
-      [NotNull] string unit,
-      RdOtelMetricType type
-    )
-    {
-      if (name == null) throw new ArgumentNullException("name");
-      if (description == null) throw new ArgumentNullException("description");
-      if (unit == null) throw new ArgumentNullException("unit");
-      
-      Name = name;
-      Description = description;
-      Unit = unit;
-      Type = type;
-    }
-    //secondary constructor
-    //deconstruct trait
-    public void Deconstruct([NotNull] out string name, [NotNull] out string description, [NotNull] out string unit, out RdOtelMetricType type)
-    {
-      name = Name;
-      description = Description;
-      unit = Unit;
-      type = Type;
-    }
-    //statics
-    
-    public static CtxReadDelegate<RdOtelMetric> Read = (ctx, reader) => 
-    {
-      var name = reader.ReadString();
-      var description = reader.ReadString();
-      var unit = reader.ReadString();
-      var type = (RdOtelMetricType)reader.ReadInt();
-      var _result = new RdOtelMetric(name, description, unit, type);
-      return _result;
-    };
-    
-    public static CtxWriteDelegate<RdOtelMetric> Write = (ctx, writer, value) => 
-    {
-      writer.Write(value.Name);
-      writer.Write(value.Description);
-      writer.Write(value.Unit);
-      writer.Write((int)value.Type);
-    };
-    
-    //constants
-    
-    //custom body
-    //methods
-    //equals trait
-    public override bool Equals(object obj)
-    {
-      if (ReferenceEquals(null, obj)) return false;
-      if (ReferenceEquals(this, obj)) return true;
-      if (obj.GetType() != GetType()) return false;
-      return Equals((RdOtelMetric) obj);
-    }
-    public bool Equals(RdOtelMetric other)
-    {
-      if (ReferenceEquals(null, other)) return false;
-      if (ReferenceEquals(this, other)) return true;
-      return Name == other.Name && Description == other.Description && Unit == other.Unit && Type == other.Type;
-    }
-    //hash code trait
-    public override int GetHashCode()
-    {
-      unchecked {
-        var hash = 0;
-        hash = hash * 31 + Name.GetHashCode();
-        hash = hash * 31 + Description.GetHashCode();
-        hash = hash * 31 + Unit.GetHashCode();
-        hash = hash * 31 + (int) Type;
-        return hash;
-      }
-    }
-    //pretty print
-    public void Print(PrettyPrinter printer)
-    {
-      printer.Println("RdOtelMetric (");
-      using (printer.IndentCookie()) {
-        printer.Print("name = "); Name.PrintEx(printer); printer.Println();
-        printer.Print("description = "); Description.PrintEx(printer); printer.Println();
-        printer.Print("unit = "); Unit.PrintEx(printer); printer.Println();
-        printer.Print("type = "); Type.PrintEx(printer); printer.Println();
-      }
-      printer.Print(")");
-    }
-    //toString
-    public override string ToString()
-    {
-      var printer = new SingleLinePrettyPrinter();
-      Print(printer);
-      return printer.ToString();
-    }
-  }
-  
-  
-  /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:160</p>
-  /// </summary>
-  public enum RdOtelMetricType {
-    Gauge,
-    Sum,
-    Histogram,
-    Unknown
-  }
-  
-  
-  /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:141</p>
-  /// </summary>
-  public sealed class RdOtelResource : IPrintable, IEquatable<RdOtelResource>
-  {
-    //fields
-    //public fields
-    [NotNull] public string ServiceName {get; private set;}
-    [CanBeNull] public string ServiceInstanceId {get; private set;}
-    
-    //private fields
-    //primary constructor
-    public RdOtelResource(
-      [NotNull] string serviceName,
-      [CanBeNull] string serviceInstanceId
-    )
-    {
-      if (serviceName == null) throw new ArgumentNullException("serviceName");
-      
-      ServiceName = serviceName;
-      ServiceInstanceId = serviceInstanceId;
-    }
-    //secondary constructor
-    //deconstruct trait
-    public void Deconstruct([NotNull] out string serviceName, [CanBeNull] out string serviceInstanceId)
-    {
-      serviceName = ServiceName;
-      serviceInstanceId = ServiceInstanceId;
-    }
-    //statics
-    
-    public static CtxReadDelegate<RdOtelResource> Read = (ctx, reader) => 
-    {
-      var serviceName = reader.ReadString();
-      var serviceInstanceId = ReadStringNullable(ctx, reader);
-      var _result = new RdOtelResource(serviceName, serviceInstanceId);
-      return _result;
-    };
-    public static CtxReadDelegate<string> ReadStringNullable = JetBrains.Rd.Impl.Serializers.ReadString.NullableClass();
-    
-    public static CtxWriteDelegate<RdOtelResource> Write = (ctx, writer, value) => 
-    {
-      writer.Write(value.ServiceName);
-      WriteStringNullable(ctx, writer, value.ServiceInstanceId);
-    };
-    public static  CtxWriteDelegate<string> WriteStringNullable = JetBrains.Rd.Impl.Serializers.WriteString.NullableClass();
-    
-    //constants
-    
-    //custom body
-    //methods
-    //equals trait
-    public override bool Equals(object obj)
-    {
-      if (ReferenceEquals(null, obj)) return false;
-      if (ReferenceEquals(this, obj)) return true;
-      if (obj.GetType() != GetType()) return false;
-      return Equals((RdOtelResource) obj);
-    }
-    public bool Equals(RdOtelResource other)
-    {
-      if (ReferenceEquals(null, other)) return false;
-      if (ReferenceEquals(this, other)) return true;
-      return ServiceName == other.ServiceName && Equals(ServiceInstanceId, other.ServiceInstanceId);
-    }
-    //hash code trait
-    public override int GetHashCode()
-    {
-      unchecked {
-        var hash = 0;
-        hash = hash * 31 + ServiceName.GetHashCode();
-        hash = hash * 31 + (ServiceInstanceId != null ? ServiceInstanceId.GetHashCode() : 0);
-        return hash;
-      }
-    }
-    //pretty print
-    public void Print(PrettyPrinter printer)
-    {
-      printer.Println("RdOtelResource (");
-      using (printer.IndentCookie()) {
-        printer.Print("serviceName = "); ServiceName.PrintEx(printer); printer.Println();
-        printer.Print("serviceInstanceId = "); ServiceInstanceId.PrintEx(printer); printer.Println();
-      }
-      printer.Print(")");
-    }
-    //toString
-    public override string ToString()
-    {
-      var printer = new SingleLinePrettyPrinter();
-      Print(printer);
-      return printer.ToString();
-    }
-  }
-  
-  
-  /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:146</p>
-  /// </summary>
-  public sealed class RdOtelResourceMetrics : IPrintable, IEquatable<RdOtelResourceMetrics>
-  {
-    //fields
-    //public fields
-    [NotNull] public RdOtelResource Resource {get; private set;}
-    [NotNull] public RdOtelScopeMetrics[] ScopeMetrics {get; private set;}
-    
-    //private fields
-    //primary constructor
-    public RdOtelResourceMetrics(
-      [NotNull] RdOtelResource resource,
-      [NotNull] RdOtelScopeMetrics[] scopeMetrics
-    )
-    {
-      if (resource == null) throw new ArgumentNullException("resource");
-      if (scopeMetrics == null) throw new ArgumentNullException("scopeMetrics");
-      
-      Resource = resource;
-      ScopeMetrics = scopeMetrics;
-    }
-    //secondary constructor
-    //deconstruct trait
-    public void Deconstruct([NotNull] out RdOtelResource resource, [NotNull] out RdOtelScopeMetrics[] scopeMetrics)
-    {
-      resource = Resource;
-      scopeMetrics = ScopeMetrics;
-    }
-    //statics
-    
-    public static CtxReadDelegate<RdOtelResourceMetrics> Read = (ctx, reader) => 
-    {
-      var resource = RdOtelResource.Read(ctx, reader);
-      var scopeMetrics = ReadRdOtelScopeMetricsArray(ctx, reader);
-      var _result = new RdOtelResourceMetrics(resource, scopeMetrics);
-      return _result;
-    };
-    public static CtxReadDelegate<RdOtelScopeMetrics[]> ReadRdOtelScopeMetricsArray = RdOtelScopeMetrics.Read.Array();
-    
-    public static CtxWriteDelegate<RdOtelResourceMetrics> Write = (ctx, writer, value) => 
-    {
-      RdOtelResource.Write(ctx, writer, value.Resource);
-      WriteRdOtelScopeMetricsArray(ctx, writer, value.ScopeMetrics);
-    };
-    public static  CtxWriteDelegate<RdOtelScopeMetrics[]> WriteRdOtelScopeMetricsArray = RdOtelScopeMetrics.Write.Array();
-    
-    //constants
-    
-    //custom body
-    //methods
-    //equals trait
-    public override bool Equals(object obj)
-    {
-      if (ReferenceEquals(null, obj)) return false;
-      if (ReferenceEquals(this, obj)) return true;
-      if (obj.GetType() != GetType()) return false;
-      return Equals((RdOtelResourceMetrics) obj);
-    }
-    public bool Equals(RdOtelResourceMetrics other)
-    {
-      if (ReferenceEquals(null, other)) return false;
-      if (ReferenceEquals(this, other)) return true;
-      return Equals(Resource, other.Resource) && ScopeMetrics.SequenceEqual(other.ScopeMetrics);
-    }
-    //hash code trait
-    public override int GetHashCode()
-    {
-      unchecked {
-        var hash = 0;
-        hash = hash * 31 + Resource.GetHashCode();
-        hash = hash * 31 + ScopeMetrics.ContentHashCode();
-        return hash;
-      }
-    }
-    //pretty print
-    public void Print(PrettyPrinter printer)
-    {
-      printer.Println("RdOtelResourceMetrics (");
-      using (printer.IndentCookie()) {
-        printer.Print("resource = "); Resource.PrintEx(printer); printer.Println();
-        printer.Print("scopeMetrics = "); ScopeMetrics.PrintEx(printer); printer.Println();
-      }
-      printer.Print(")");
-    }
-    //toString
-    public override string ToString()
-    {
-      var printer = new SingleLinePrettyPrinter();
-      Print(printer);
-      return printer.ToString();
-    }
-  }
-  
-  
-  /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:151</p>
-  /// </summary>
-  public sealed class RdOtelScopeMetrics : IPrintable, IEquatable<RdOtelScopeMetrics>
-  {
-    //fields
-    //public fields
-    [NotNull] public string ScopeName {get; private set;}
-    [NotNull] public RdOtelMetric[] Metrics {get; private set;}
-    
-    //private fields
-    //primary constructor
-    public RdOtelScopeMetrics(
-      [NotNull] string scopeName,
-      [NotNull] RdOtelMetric[] metrics
-    )
-    {
-      if (scopeName == null) throw new ArgumentNullException("scopeName");
-      if (metrics == null) throw new ArgumentNullException("metrics");
-      
-      ScopeName = scopeName;
-      Metrics = metrics;
-    }
-    //secondary constructor
-    //deconstruct trait
-    public void Deconstruct([NotNull] out string scopeName, [NotNull] out RdOtelMetric[] metrics)
-    {
-      scopeName = ScopeName;
-      metrics = Metrics;
-    }
-    //statics
-    
-    public static CtxReadDelegate<RdOtelScopeMetrics> Read = (ctx, reader) => 
-    {
-      var scopeName = reader.ReadString();
-      var metrics = ReadRdOtelMetricArray(ctx, reader);
-      var _result = new RdOtelScopeMetrics(scopeName, metrics);
-      return _result;
-    };
-    public static CtxReadDelegate<RdOtelMetric[]> ReadRdOtelMetricArray = RdOtelMetric.Read.Array();
-    
-    public static CtxWriteDelegate<RdOtelScopeMetrics> Write = (ctx, writer, value) => 
-    {
-      writer.Write(value.ScopeName);
-      WriteRdOtelMetricArray(ctx, writer, value.Metrics);
-    };
-    public static  CtxWriteDelegate<RdOtelMetric[]> WriteRdOtelMetricArray = RdOtelMetric.Write.Array();
-    
-    //constants
-    
-    //custom body
-    //methods
-    //equals trait
-    public override bool Equals(object obj)
-    {
-      if (ReferenceEquals(null, obj)) return false;
-      if (ReferenceEquals(this, obj)) return true;
-      if (obj.GetType() != GetType()) return false;
-      return Equals((RdOtelScopeMetrics) obj);
-    }
-    public bool Equals(RdOtelScopeMetrics other)
-    {
-      if (ReferenceEquals(null, other)) return false;
-      if (ReferenceEquals(this, other)) return true;
-      return ScopeName == other.ScopeName && Metrics.SequenceEqual(other.Metrics);
-    }
-    //hash code trait
-    public override int GetHashCode()
-    {
-      unchecked {
-        var hash = 0;
-        hash = hash * 31 + ScopeName.GetHashCode();
-        hash = hash * 31 + Metrics.ContentHashCode();
-        return hash;
-      }
-    }
-    //pretty print
-    public void Print(PrettyPrinter printer)
-    {
-      printer.Println("RdOtelScopeMetrics (");
-      using (printer.IndentCookie()) {
-        printer.Print("scopeName = "); ScopeName.PrintEx(printer); printer.Println();
-        printer.Print("metrics = "); Metrics.PrintEx(printer); printer.Println();
       }
       printer.Print(")");
     }
