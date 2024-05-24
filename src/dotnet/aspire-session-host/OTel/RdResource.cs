@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using AspireSessionHost.Generated;
 using Google.Protobuf.Collections;
 using OpenTelemetry.Proto.Metrics.V1;
 
@@ -41,4 +42,10 @@ internal sealed class RdResource(string id)
         Metric.DataOneofCase.Histogram => RdMetricType.Histogram,
         _ => RdMetricType.Other
     };
+
+    public ResourceMetricId[] GetMetricIds()
+    {
+        var ids = _metrics.Keys.Select(it => new ResourceMetricId(it.ScopeName, it.MetricName)).ToArray();
+        return ids;
+    }
 }

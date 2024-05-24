@@ -14,6 +14,7 @@ import com.jetbrains.rd.util.threading.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import me.rafaelldi.aspire.AspireBundle
+import me.rafaelldi.aspire.otel.OTelMetricPanel
 import me.rafaelldi.aspire.services.components.ResourceConsolePanel
 import me.rafaelldi.aspire.services.components.ResourceDashboardPanel
 import me.rafaelldi.aspire.services.components.ResourceMetricPanel
@@ -31,11 +32,16 @@ class AspireResourceServiceViewDescriptor(
 ) : ServiceViewDescriptor, DataProvider {
 
     private val toolbarActions = DefaultActionGroup(
+        ActionManager.getInstance().getAction("Aspire.Resource.Restart"),
+        ActionManager.getInstance().getAction("Aspire.Resource.Restart.Debug"),
         ActionManager.getInstance().getAction("Aspire.Resource.Stop")
     )
 
     private val metricPanelDelegate = lazy { ResourceMetricPanel(resourceService) }
     private val metricPanel by metricPanelDelegate
+
+    private val metricPanelDelegate2 = lazy { OTelMetricPanel(resourceService) }
+    private val metricPanel2 by metricPanelDelegate2
 
     private val mainPanel by lazy {
         val tabs = JBTabbedPane()
@@ -43,6 +49,7 @@ class AspireResourceServiceViewDescriptor(
         tabs.addTab(AspireBundle.getMessage("service.tab.console"), ResourceConsolePanel(resourceService))
         if (AspireSettings.getInstance().collectTelemetry) {
             tabs.addTab(AspireBundle.getMessage("service.tab.metrics"), metricPanel)
+            tabs.addTab(AspireBundle.getMessage("service.tab.metrics"), metricPanel2)
         }
 
         JPanel(BorderLayout()).apply {
@@ -63,9 +70,13 @@ class AspireResourceServiceViewDescriptor(
         }
     }
 
-    private fun update() {
+    private suspend fun update() {
         if (metricPanelDelegate.isInitialized()) {
             metricPanel.update()
+        }
+        if (metricPanelDelegate2.isInitialized()) {
+            resourceService.updateMetricIds()
+            metricPanel2.update()
         }
     }
 

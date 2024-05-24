@@ -1,6 +1,7 @@
 using System.Globalization;
 using Aspire.V1;
 using AspireSessionHost.Generated;
+using Google.Protobuf.Collections;
 using Google.Protobuf.WellKnownTypes;
 using ResourceProperty = AspireSessionHost.Generated.ResourceProperty;
 using ResourceType = AspireSessionHost.Generated.ResourceType;
@@ -19,7 +20,8 @@ internal static class ResourceExtensions
         resource.CreatedAt.ToDateTime(),
         resource.Properties.Select(it => it.ToModel()).ToArray(),
         resource.Environment.Select(it => it.ToModel()).ToArray(),
-        resource.Urls.Select(it => it.ToModel()).ToArray()
+        resource.Urls.Select(it => it.ToModel()).ToArray(),
+        GetOTelResourceId(resource.Environment)
     );
 
     private static ResourceType MapType(string type) => type switch
@@ -81,7 +83,7 @@ internal static class ResourceExtensions
         return value.ToString();
     }
 
-    private static ResourceEnvironmentVariable ToModel(this Aspire.V1.EnvironmentVariable variable) => new(
+    private static ResourceEnvironmentVariable ToModel(this EnvironmentVariable variable) => new(
         variable.Name,
         variable.HasValue ? variable.Value : null
     );
@@ -91,4 +93,30 @@ internal static class ResourceExtensions
         url.FullUrl,
         url.IsInternal
     );
+
+    private static string? GetOTelResourceId(RepeatedField<EnvironmentVariable> variables)
+    {
+        var resourceAttributes = variables.FirstOrDefault(v => v.Name == "OTEL_RESOURCE_ATTRIBUTES");
+        if (resourceAttributes is null || !resourceAttributes.HasValue) return null;
+
+        var attributes = resourceAttributes.Value.Split(",");
+        string? serviceInstanceId = null;
+        string? serviceName = null;
+
+        foreach (var attribute in attributes)
+        {
+            if (attribute.StartsWith("service.instance.id="))
+            {
+                serviceInstanceId = attribute.Substring(20);
+                break;
+            }
+
+            if (attribute.StartsWith("service.name="))
+            {
+                serviceName = attribute.Substring(13);
+            }
+        }
+
+        return serviceInstanceId ?? serviceName;
+    }
 }

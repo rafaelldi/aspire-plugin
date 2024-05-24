@@ -18,7 +18,7 @@ import kotlin.io.path.Path
 import kotlin.math.roundToInt
 
 class AspireResourceService(
-    wrapper: ResourceWrapper,
+    private val wrapper: ResourceWrapper,
     val lifetime: Lifetime,
     private val hostService: AspireHostService,
     private val project: Project
@@ -73,6 +73,8 @@ class AspireResourceService(
 
     private val metrics = mutableMapOf<AspireResourceMetricKey, ResourceMetric>()
     fun getMetrics() = metrics.toMap()
+
+    private val metricIds = mutableMapOf<String, Unit>()
 
     init {
         val model = wrapper.model.valueOrNull
@@ -186,4 +188,12 @@ class AspireResourceService(
         val key = AspireResourceMetricKey(metric.scope, metric.name)
         metrics[key] = metric
     }
+
+    suspend fun updateMetricIds() {
+        val ids = wrapper.getMetrics.startSuspending(lifetime, Unit).map { it.scopeName }.distinct()
+        metricIds.clear()
+        ids.forEach { metricIds.put(it, Unit) }
+    }
+
+    fun getMetricsIds() = metricIds.keys.toList()
 }

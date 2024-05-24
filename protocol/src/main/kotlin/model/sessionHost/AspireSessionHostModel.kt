@@ -53,6 +53,7 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
         property("isInitialized", bool).async
         sink("logReceived", ResourceLog)
         sink("metricReceived", ResourceMetric)
+        call("getMetrics", void, array(ResourceMetricId))
     }
 
     private val ResourceModel = structdef {
@@ -85,6 +86,7 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
         field("properties", array(ResourceProperty))
         field("environment", array(ResourceEnvironmentVariable))
         field("urls", array(ResourceUrl))
+        field("oTelResourceId", string.nullable)
     }
 
     private val ResourceProperty = structdef {
@@ -108,6 +110,11 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
         field("text", string)
         field("isError", bool)
         field("lineNumber", int)
+    }
+
+    private val ResourceMetricId = structdef {
+        field("scopeName", string)
+        field("metricName", string)
     }
 
     private val ResourceMetric = structdef {
