@@ -7,14 +7,14 @@ import com.intellij.ide.projectView.PresentationData
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DataProvider
 import com.intellij.openapi.actionSystem.DefaultActionGroup
-import com.intellij.openapi.rd.util.withUiContext
+import com.intellij.openapi.application.EDT
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBTabbedPane
 import com.jetbrains.rd.util.threading.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import me.rafaelldi.aspire.AspireBundle
-import me.rafaelldi.aspire.otel.OTelMetricPanel
 import me.rafaelldi.aspire.services.components.ResourceConsolePanel
 import me.rafaelldi.aspire.services.components.ResourceDashboardPanel
 import me.rafaelldi.aspire.services.components.ResourceMetricPanel
@@ -40,16 +40,12 @@ class AspireResourceServiceViewDescriptor(
     private val metricPanelDelegate = lazy { ResourceMetricPanel(resourceService) }
     private val metricPanel by metricPanelDelegate
 
-    private val metricPanelDelegate2 = lazy { OTelMetricPanel(resourceService) }
-    private val metricPanel2 by metricPanelDelegate2
-
     private val mainPanel by lazy {
         val tabs = JBTabbedPane()
         tabs.addTab(AspireBundle.getMessage("service.tab.dashboard"), ResourceDashboardPanel(resourceService))
         tabs.addTab(AspireBundle.getMessage("service.tab.console"), ResourceConsolePanel(resourceService))
         if (AspireSettings.getInstance().collectTelemetry) {
             tabs.addTab(AspireBundle.getMessage("service.tab.metrics"), metricPanel)
-            tabs.addTab(AspireBundle.getMessage("service.tab.metrics"), metricPanel2)
         }
 
         JPanel(BorderLayout()).apply {
@@ -62,7 +58,7 @@ class AspireResourceServiceViewDescriptor(
             resourceService.lifetime.launch(Dispatchers.Default) {
                 while (true) {
                     delay(1.seconds)
-                    withUiContext {
+                    withContext(Dispatchers.EDT) {
                         update()
                     }
                 }
@@ -70,13 +66,9 @@ class AspireResourceServiceViewDescriptor(
         }
     }
 
-    private suspend fun update() {
+    private fun update() {
         if (metricPanelDelegate.isInitialized()) {
             metricPanel.update()
-        }
-        if (metricPanelDelegate2.isInitialized()) {
-            resourceService.updateMetricIds()
-            metricPanel2.update()
         }
     }
 

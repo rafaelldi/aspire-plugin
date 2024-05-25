@@ -10,12 +10,12 @@ import me.rafaelldi.aspire.services.AspireResourceMetricKey
 import me.rafaelldi.aspire.services.AspireResourceService
 
 class ResourceMetricPanel(private val resourceService: AspireResourceService) : BorderLayoutPanel() {
-    private val table = MetricTable(this)
+    private val tree = MetricTree(this)
     private var chosenMetric: AspireResourceMetricKey? = null
     private var chartPanel: ResourceMetricChartPanel? = null
 
     private val splitter = OnePixelSplitter(false).apply {
-        firstComponent = ScrollPaneFactory.createScrollPane(table, SideBorder.NONE)
+        firstComponent = ScrollPaneFactory.createScrollPane(tree, SideBorder.NONE)
         secondComponent = JBPanelWithEmptyText()
             .withEmptyText(AspireBundle.message("service.tab.metrics.select.metric"))
     }
@@ -31,12 +31,12 @@ class ResourceMetricPanel(private val resourceService: AspireResourceService) : 
     }
 
     fun update() {
-        val metrics = resourceService.getMetrics()
-        table.addOrUpdate(metrics)
-        chartPanel?.let {
-            val key = chosenMetric ?: return@let
-            val metric = metrics[key] ?: return@let
-            it.update(metric.value, metric.timestamp)
-        }
+//        val metrics = resourceService.getMetrics()
+//        table.addOrUpdate(metrics)
+//        chartPanel?.let {
+//            val key = chosenMetric ?: return@let
+//            val metric = metrics[key] ?: return@let
+//            it.update(metric.value, metric.timestamp)
+//        }
     }
 }
