@@ -25,6 +25,9 @@ class AspireSessionHostModel private constructor(
     private val _processTerminated: RdSignal<ProcessTerminated>,
     private val _logReceived: RdSignal<LogReceived>,
     private val _resources: RdMap<String, ResourceWrapper>,
+    private val _metricIds: RdList<ResourceMetricId>,
+    private val _metricSubscriptions: RdList<ResourceMetricId>,
+    private val _metricReceived: RdSignal<ResourceMetric>,
     private val _getTraceNodes: RdCall<Unit, Array<TraceNode>>
 ) : RdExtBase() {
     //companion
@@ -75,7 +78,7 @@ class AspireSessionHostModel private constructor(
         private val __SessionCreationResultNullableSerializer = SessionCreationResult.nullable()
         private val __TraceNodeArraySerializer = TraceNode.array()
         
-        const val serializationHash = -7342202159114093316L
+        const val serializationHash = -6634680993581815044L
         
     }
     override val serializersOwner: ISerializersOwner get() = AspireSessionHostModel
@@ -88,9 +91,17 @@ class AspireSessionHostModel private constructor(
     val processTerminated: ISignal<ProcessTerminated> get() = _processTerminated
     val logReceived: ISignal<LogReceived> get() = _logReceived
     val resources: IMutableViewableMap<String, ResourceWrapper> get() = _resources
+    val metricIds: IMutableViewableList<ResourceMetricId> get() = _metricIds
+    val metricSubscriptions: IMutableViewableList<ResourceMetricId> get() = _metricSubscriptions
+    val metricReceived: ISource<ResourceMetric> get() = _metricReceived
     val getTraceNodes: IRdCall<Unit, Array<TraceNode>> get() = _getTraceNodes
     //methods
     //initializer
+    init {
+        _metricIds.optimizeNested = true
+        _metricSubscriptions.optimizeNested = true
+    }
+    
     init {
         bindableChildren.add("createSession" to _createSession)
         bindableChildren.add("deleteSession" to _deleteSession)
@@ -98,6 +109,9 @@ class AspireSessionHostModel private constructor(
         bindableChildren.add("processTerminated" to _processTerminated)
         bindableChildren.add("logReceived" to _logReceived)
         bindableChildren.add("resources" to _resources)
+        bindableChildren.add("metricIds" to _metricIds)
+        bindableChildren.add("metricSubscriptions" to _metricSubscriptions)
+        bindableChildren.add("metricReceived" to _metricReceived)
         bindableChildren.add("getTraceNodes" to _getTraceNodes)
     }
     
@@ -110,6 +124,9 @@ class AspireSessionHostModel private constructor(
         RdSignal<ProcessTerminated>(ProcessTerminated),
         RdSignal<LogReceived>(LogReceived),
         RdMap<String, ResourceWrapper>(FrameworkMarshallers.String, ResourceWrapper),
+        RdList<ResourceMetricId>(ResourceMetricId),
+        RdList<ResourceMetricId>(ResourceMetricId),
+        RdSignal<ResourceMetric>(ResourceMetric),
         RdCall<Unit, Array<TraceNode>>(FrameworkMarshallers.Void, __TraceNodeArraySerializer)
     )
     
@@ -125,6 +142,9 @@ class AspireSessionHostModel private constructor(
             print("processTerminated = "); _processTerminated.print(printer); println()
             print("logReceived = "); _logReceived.print(printer); println()
             print("resources = "); _resources.print(printer); println()
+            print("metricIds = "); _metricIds.print(printer); println()
+            print("metricSubscriptions = "); _metricSubscriptions.print(printer); println()
+            print("metricReceived = "); _metricReceived.print(printer); println()
             print("getTraceNodes = "); _getTraceNodes.print(printer); println()
         }
         printer.print(")")
@@ -138,6 +158,9 @@ class AspireSessionHostModel private constructor(
             _processTerminated.deepClonePolymorphic(),
             _logReceived.deepClonePolymorphic(),
             _resources.deepClonePolymorphic(),
+            _metricIds.deepClonePolymorphic(),
+            _metricSubscriptions.deepClonePolymorphic(),
+            _metricReceived.deepClonePolymorphic(),
             _getTraceNodes.deepClonePolymorphic()
         )
     }
@@ -351,7 +374,7 @@ data class ProcessTerminated (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:98]
+ * #### Generated from [AspireSessionHostModel.kt:95]
  */
 data class ResourceEnvironmentVariable (
     val key: String,
@@ -416,7 +439,7 @@ data class ResourceEnvironmentVariable (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:109]
+ * #### Generated from [AspireSessionHostModel.kt:106]
  */
 data class ResourceLog (
     val text: String,
@@ -487,14 +510,10 @@ data class ResourceLog (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:120]
+ * #### Generated from [AspireSessionHostModel.kt:118]
  */
 data class ResourceMetric (
-    val serviceName: String,
-    val scope: String,
-    val name: String,
-    val description: String?,
-    val unit: String?,
+    val id: ResourceMetricId,
     val value: Double,
     val timestamp: Long
 ) : IPrintable {
@@ -506,22 +525,14 @@ data class ResourceMetric (
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ResourceMetric  {
-            val serviceName = buffer.readString()
-            val scope = buffer.readString()
-            val name = buffer.readString()
-            val description = buffer.readNullable { buffer.readString() }
-            val unit = buffer.readNullable { buffer.readString() }
+            val id = ResourceMetricId.read(ctx, buffer)
             val value = buffer.readDouble()
             val timestamp = buffer.readLong()
-            return ResourceMetric(serviceName, scope, name, description, unit, value, timestamp)
+            return ResourceMetric(id, value, timestamp)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ResourceMetric)  {
-            buffer.writeString(value.serviceName)
-            buffer.writeString(value.scope)
-            buffer.writeString(value.name)
-            buffer.writeNullable(value.description) { buffer.writeString(it) }
-            buffer.writeNullable(value.unit) { buffer.writeString(it) }
+            ResourceMetricId.write(ctx, buffer, value.id)
             buffer.writeDouble(value.value)
             buffer.writeLong(value.timestamp)
         }
@@ -539,11 +550,7 @@ data class ResourceMetric (
         
         other as ResourceMetric
         
-        if (serviceName != other.serviceName) return false
-        if (scope != other.scope) return false
-        if (name != other.name) return false
-        if (description != other.description) return false
-        if (unit != other.unit) return false
+        if (id != other.id) return false
         if (value != other.value) return false
         if (timestamp != other.timestamp) return false
         
@@ -552,11 +559,7 @@ data class ResourceMetric (
     //hash code trait
     override fun hashCode(): Int  {
         var __r = 0
-        __r = __r*31 + serviceName.hashCode()
-        __r = __r*31 + scope.hashCode()
-        __r = __r*31 + name.hashCode()
-        __r = __r*31 + if (description != null) description.hashCode() else 0
-        __r = __r*31 + if (unit != null) unit.hashCode() else 0
+        __r = __r*31 + id.hashCode()
         __r = __r*31 + value.hashCode()
         __r = __r*31 + timestamp.hashCode()
         return __r
@@ -565,11 +568,7 @@ data class ResourceMetric (
     override fun print(printer: PrettyPrinter)  {
         printer.println("ResourceMetric (")
         printer.indent {
-            print("serviceName = "); serviceName.print(printer); println()
-            print("scope = "); scope.print(printer); println()
-            print("name = "); name.print(printer); println()
-            print("description = "); description.print(printer); println()
-            print("unit = "); unit.print(printer); println()
+            print("id = "); id.print(printer); println()
             print("value = "); value.print(printer); println()
             print("timestamp = "); timestamp.print(printer); println()
         }
@@ -582,9 +581,10 @@ data class ResourceMetric (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:115]
+ * #### Generated from [AspireSessionHostModel.kt:112]
  */
 data class ResourceMetricId (
+    val resourceId: String,
     val scopeName: String,
     val metricName: String
 ) : IPrintable {
@@ -596,12 +596,14 @@ data class ResourceMetricId (
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ResourceMetricId  {
+            val resourceId = buffer.readString()
             val scopeName = buffer.readString()
             val metricName = buffer.readString()
-            return ResourceMetricId(scopeName, metricName)
+            return ResourceMetricId(resourceId, scopeName, metricName)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ResourceMetricId)  {
+            buffer.writeString(value.resourceId)
             buffer.writeString(value.scopeName)
             buffer.writeString(value.metricName)
         }
@@ -619,6 +621,7 @@ data class ResourceMetricId (
         
         other as ResourceMetricId
         
+        if (resourceId != other.resourceId) return false
         if (scopeName != other.scopeName) return false
         if (metricName != other.metricName) return false
         
@@ -627,6 +630,7 @@ data class ResourceMetricId (
     //hash code trait
     override fun hashCode(): Int  {
         var __r = 0
+        __r = __r*31 + resourceId.hashCode()
         __r = __r*31 + scopeName.hashCode()
         __r = __r*31 + metricName.hashCode()
         return __r
@@ -635,6 +639,7 @@ data class ResourceMetricId (
     override fun print(printer: PrettyPrinter)  {
         printer.println("ResourceMetricId (")
         printer.indent {
+            print("resourceId = "); resourceId.print(printer); println()
             print("scopeName = "); scopeName.print(printer); println()
             print("metricName = "); metricName.print(printer); println()
         }
@@ -647,7 +652,7 @@ data class ResourceMetricId (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:59]
+ * #### Generated from [AspireSessionHostModel.kt:57]
  */
 data class ResourceModel (
     val name: String,
@@ -659,8 +664,7 @@ data class ResourceModel (
     val createdAt: Date,
     val properties: Array<ResourceProperty>,
     val environment: Array<ResourceEnvironmentVariable>,
-    val urls: Array<ResourceUrl>,
-    val oTelResourceId: String?
+    val urls: Array<ResourceUrl>
 ) : IPrintable {
     //companion
     
@@ -680,8 +684,7 @@ data class ResourceModel (
             val properties = buffer.readArray {ResourceProperty.read(ctx, buffer)}
             val environment = buffer.readArray {ResourceEnvironmentVariable.read(ctx, buffer)}
             val urls = buffer.readArray {ResourceUrl.read(ctx, buffer)}
-            val oTelResourceId = buffer.readNullable { buffer.readString() }
-            return ResourceModel(name, type, displayName, uid, state, stateStyle, createdAt, properties, environment, urls, oTelResourceId)
+            return ResourceModel(name, type, displayName, uid, state, stateStyle, createdAt, properties, environment, urls)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ResourceModel)  {
@@ -695,7 +698,6 @@ data class ResourceModel (
             buffer.writeArray(value.properties) { ResourceProperty.write(ctx, buffer, it) }
             buffer.writeArray(value.environment) { ResourceEnvironmentVariable.write(ctx, buffer, it) }
             buffer.writeArray(value.urls) { ResourceUrl.write(ctx, buffer, it) }
-            buffer.writeNullable(value.oTelResourceId) { buffer.writeString(it) }
         }
         
         
@@ -721,7 +723,6 @@ data class ResourceModel (
         if (!(properties contentDeepEquals other.properties)) return false
         if (!(environment contentDeepEquals other.environment)) return false
         if (!(urls contentDeepEquals other.urls)) return false
-        if (oTelResourceId != other.oTelResourceId) return false
         
         return true
     }
@@ -738,7 +739,6 @@ data class ResourceModel (
         __r = __r*31 + properties.contentDeepHashCode()
         __r = __r*31 + environment.contentDeepHashCode()
         __r = __r*31 + urls.contentDeepHashCode()
-        __r = __r*31 + if (oTelResourceId != null) oTelResourceId.hashCode() else 0
         return __r
     }
     //pretty print
@@ -755,7 +755,6 @@ data class ResourceModel (
             print("properties = "); properties.print(printer); println()
             print("environment = "); environment.print(printer); println()
             print("urls = "); urls.print(printer); println()
-            print("oTelResourceId = "); oTelResourceId.print(printer); println()
         }
         printer.print(")")
     }
@@ -766,7 +765,7 @@ data class ResourceModel (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:92]
+ * #### Generated from [AspireSessionHostModel.kt:89]
  */
 data class ResourceProperty (
     val name: String,
@@ -837,7 +836,7 @@ data class ResourceProperty (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:69]
+ * #### Generated from [AspireSessionHostModel.kt:67]
  */
 enum class ResourceState {
     Finished, 
@@ -867,7 +866,7 @@ enum class ResourceState {
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:78]
+ * #### Generated from [AspireSessionHostModel.kt:76]
  */
 enum class ResourceStateStyle {
     Success, 
@@ -895,7 +894,7 @@ enum class ResourceStateStyle {
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:61]
+ * #### Generated from [AspireSessionHostModel.kt:59]
  */
 enum class ResourceType {
     Project, 
@@ -922,7 +921,7 @@ enum class ResourceType {
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:103]
+ * #### Generated from [AspireSessionHostModel.kt:100]
  */
 data class ResourceUrl (
     val name: String,
@@ -998,9 +997,7 @@ data class ResourceUrl (
 class ResourceWrapper private constructor(
     private val _model: RdOptionalProperty<ResourceModel>,
     private val _isInitialized: RdOptionalProperty<Boolean>,
-    private val _logReceived: RdSignal<ResourceLog>,
-    private val _metricReceived: RdSignal<ResourceMetric>,
-    private val _getMetrics: RdCall<Unit, Array<ResourceMetricId>>
+    private val _logReceived: RdSignal<ResourceLog>
 ) : RdBindableBase() {
     //companion
     
@@ -1014,9 +1011,7 @@ class ResourceWrapper private constructor(
             val _model = RdOptionalProperty.read(ctx, buffer, ResourceModel)
             val _isInitialized = RdOptionalProperty.read(ctx, buffer, FrameworkMarshallers.Bool)
             val _logReceived = RdSignal.read(ctx, buffer, ResourceLog)
-            val _metricReceived = RdSignal.read(ctx, buffer, ResourceMetric)
-            val _getMetrics = RdCall.read(ctx, buffer, FrameworkMarshallers.Void, __ResourceMetricIdArraySerializer)
-            return ResourceWrapper(_model, _isInitialized, _logReceived, _metricReceived, _getMetrics).withId(_id)
+            return ResourceWrapper(_model, _isInitialized, _logReceived).withId(_id)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ResourceWrapper)  {
@@ -1024,19 +1019,14 @@ class ResourceWrapper private constructor(
             RdOptionalProperty.write(ctx, buffer, value._model)
             RdOptionalProperty.write(ctx, buffer, value._isInitialized)
             RdSignal.write(ctx, buffer, value._logReceived)
-            RdSignal.write(ctx, buffer, value._metricReceived)
-            RdCall.write(ctx, buffer, value._getMetrics)
         }
         
-        private val __ResourceMetricIdArraySerializer = ResourceMetricId.array()
         
     }
     //fields
     val model: IOptProperty<ResourceModel> get() = _model
     val isInitialized: IOptProperty<Boolean> get() = _isInitialized
     val logReceived: ISource<ResourceLog> get() = _logReceived
-    val metricReceived: ISource<ResourceMetric> get() = _metricReceived
-    val getMetrics: IRdCall<Unit, Array<ResourceMetricId>> get() = _getMetrics
     //methods
     //initializer
     init {
@@ -1052,8 +1042,6 @@ class ResourceWrapper private constructor(
         bindableChildren.add("model" to _model)
         bindableChildren.add("isInitialized" to _isInitialized)
         bindableChildren.add("logReceived" to _logReceived)
-        bindableChildren.add("metricReceived" to _metricReceived)
-        bindableChildren.add("getMetrics" to _getMetrics)
     }
     
     //secondary constructor
@@ -1061,9 +1049,7 @@ class ResourceWrapper private constructor(
     ) : this(
         RdOptionalProperty<ResourceModel>(ResourceModel),
         RdOptionalProperty<Boolean>(FrameworkMarshallers.Bool),
-        RdSignal<ResourceLog>(ResourceLog),
-        RdSignal<ResourceMetric>(ResourceMetric),
-        RdCall<Unit, Array<ResourceMetricId>>(FrameworkMarshallers.Void, __ResourceMetricIdArraySerializer)
+        RdSignal<ResourceLog>(ResourceLog)
     )
     
     //equals trait
@@ -1075,8 +1061,6 @@ class ResourceWrapper private constructor(
             print("model = "); _model.print(printer); println()
             print("isInitialized = "); _isInitialized.print(printer); println()
             print("logReceived = "); _logReceived.print(printer); println()
-            print("metricReceived = "); _metricReceived.print(printer); println()
-            print("getMetrics = "); _getMetrics.print(printer); println()
         }
         printer.print(")")
     }
@@ -1085,9 +1069,7 @@ class ResourceWrapper private constructor(
         return ResourceWrapper(
             _model.deepClonePolymorphic(),
             _isInitialized.deepClonePolymorphic(),
-            _logReceived.deepClonePolymorphic(),
-            _metricReceived.deepClonePolymorphic(),
-            _getMetrics.deepClonePolymorphic()
+            _logReceived.deepClonePolymorphic()
         )
     }
     //contexts
@@ -1309,7 +1291,7 @@ data class SessionModel (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:130]
+ * #### Generated from [AspireSessionHostModel.kt:124]
  */
 data class TraceNode (
     val id: String,
@@ -1392,7 +1374,7 @@ data class TraceNode (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:143]
+ * #### Generated from [AspireSessionHostModel.kt:137]
  */
 data class TraceNodeAttribute (
     val key: String,
@@ -1457,7 +1439,7 @@ data class TraceNodeAttribute (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:138]
+ * #### Generated from [AspireSessionHostModel.kt:132]
  */
 data class TraceNodeChild (
     val id: String,

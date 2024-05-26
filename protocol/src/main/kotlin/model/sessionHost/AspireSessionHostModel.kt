@@ -52,8 +52,6 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
         property("model", ResourceModel)
         property("isInitialized", bool).async
         sink("logReceived", ResourceLog)
-        sink("metricReceived", ResourceMetric)
-        call("getMetrics", void, array(ResourceMetricId))
     }
 
     private val ResourceModel = structdef {
@@ -66,7 +64,7 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
         })
         field("displayName", string)
         field("uid", string)
-        field("state",  enum("ResourceState") {
+        field("state", enum("ResourceState") {
             +"Finished"
             +"Exited"
             +"FailedToStart"
@@ -86,7 +84,6 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
         field("properties", array(ResourceProperty))
         field("environment", array(ResourceEnvironmentVariable))
         field("urls", array(ResourceUrl))
-        field("oTelResourceId", string.nullable)
     }
 
     private val ResourceProperty = structdef {
@@ -113,16 +110,13 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
     }
 
     private val ResourceMetricId = structdef {
+        field("resourceId", string)
         field("scopeName", string)
         field("metricName", string)
     }
 
     private val ResourceMetric = structdef {
-        field("serviceName", string)
-        field("scope", string)
-        field("name", string)
-        field("description", string.nullable)
-        field("unit", string.nullable)
+        field("id", ResourceMetricId)
         field("value", double)
         field("timestamp", long)
     }
@@ -154,6 +148,10 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
         source("logReceived", LogReceived)
 
         map("resources", string, ResourceWrapper)
+
+        list("metricIds", ResourceMetricId)
+        list("metricSubscriptions", ResourceMetricId)
+        sink("metricReceived", ResourceMetric)
 
         call("getTraceNodes", void, array(TraceNode))
     }

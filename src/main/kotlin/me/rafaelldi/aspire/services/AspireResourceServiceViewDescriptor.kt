@@ -7,17 +7,13 @@ import com.intellij.ide.projectView.PresentationData
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DataProvider
 import com.intellij.openapi.actionSystem.DefaultActionGroup
-import com.intellij.openapi.application.EDT
+import com.intellij.openapi.project.Project
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBTabbedPane
-import com.jetbrains.rd.util.threading.coroutines.launch
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 import me.rafaelldi.aspire.AspireBundle
 import me.rafaelldi.aspire.services.components.ResourceConsolePanel
 import me.rafaelldi.aspire.services.components.ResourceDashboardPanel
-import me.rafaelldi.aspire.services.components.ResourceMetricPanel
+import me.rafaelldi.aspire.services.components.ResourceMetricComponent
 import me.rafaelldi.aspire.settings.AspireSettings
 import me.rafaelldi.aspire.util.ASPIRE_RESOURCE_STATE
 import me.rafaelldi.aspire.util.ASPIRE_RESOURCE_TYPE
@@ -25,10 +21,10 @@ import me.rafaelldi.aspire.util.ASPIRE_RESOURCE_UID
 import me.rafaelldi.aspire.util.getIcon
 import java.awt.BorderLayout
 import javax.swing.JPanel
-import kotlin.time.Duration.Companion.seconds
 
 class AspireResourceServiceViewDescriptor(
-    private val resourceService: AspireResourceService
+    private val resourceService: AspireResourceService,
+    project: Project
 ) : ServiceViewDescriptor, DataProvider {
 
     private val toolbarActions = DefaultActionGroup(
@@ -37,38 +33,19 @@ class AspireResourceServiceViewDescriptor(
         ActionManager.getInstance().getAction("Aspire.Resource.Stop")
     )
 
-    private val metricPanelDelegate = lazy { ResourceMetricPanel(resourceService) }
-    private val metricPanel by metricPanelDelegate
+    private val metricComponentDelegate = lazy { ResourceMetricComponent(resourceService, project) }
+    private val metricComponent by metricComponentDelegate
 
     private val mainPanel by lazy {
         val tabs = JBTabbedPane()
         tabs.addTab(AspireBundle.getMessage("service.tab.dashboard"), ResourceDashboardPanel(resourceService))
         tabs.addTab(AspireBundle.getMessage("service.tab.console"), ResourceConsolePanel(resourceService))
         if (AspireSettings.getInstance().collectTelemetry) {
-            tabs.addTab(AspireBundle.getMessage("service.tab.metrics"), metricPanel)
+            tabs.addTab(AspireBundle.getMessage("service.tab.metrics"), metricComponent.panel)
         }
 
         JPanel(BorderLayout()).apply {
             add(tabs, BorderLayout.CENTER)
-        }
-    }
-
-    init {
-        if (AspireSettings.getInstance().collectTelemetry) {
-            resourceService.lifetime.launch(Dispatchers.Default) {
-                while (true) {
-                    delay(1.seconds)
-                    withContext(Dispatchers.EDT) {
-                        update()
-                    }
-                }
-            }
-        }
-    }
-
-    private fun update() {
-        if (metricPanelDelegate.isInitialized()) {
-            metricPanel.update()
         }
     }
 

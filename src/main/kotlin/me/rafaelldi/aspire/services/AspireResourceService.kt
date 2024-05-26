@@ -4,14 +4,9 @@ import com.intellij.execution.filters.TextConsoleBuilderFactory
 import com.intellij.execution.services.ServiceEventListener
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
-import com.intellij.openapi.application.EDT
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.jetbrains.rd.util.lifetime.Lifetime
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
@@ -19,13 +14,11 @@ import kotlinx.datetime.toLocalDateTime
 import me.rafaelldi.aspire.AspireService
 import me.rafaelldi.aspire.generated.*
 import java.nio.file.Path
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.Path
 import kotlin.math.roundToInt
-import kotlin.time.Duration.Companion.seconds
 
 class AspireResourceService(
-    private val wrapper: ResourceWrapper,
+    wrapper: ResourceWrapper,
     val lifetime: Lifetime,
     private val hostService: AspireHostService,
     private val project: Project
@@ -72,15 +65,13 @@ class AspireResourceService(
     var containerArgs: String? = null
         private set
 
+    val hostProjectPath = hostService.projectPathString
+
     val consoleView: ConsoleView = TextConsoleBuilderFactory
         .getInstance()
         .createBuilder(project)
         .apply { setViewer(true) }
         .console
-
-    private val metrics = mutableMapOf<AspireResourceMetricKey, ResourceMetric>()
-
-    private val metricIds = ConcurrentHashMap<String, HashSet<String>>()
 
     init {
         val model = wrapper.model.valueOrNull
@@ -97,15 +88,10 @@ class AspireResourceService(
 
         wrapper.model.advise(lifetime, ::updateModel)
         wrapper.logReceived.advise(lifetime, ::logReceived)
-        wrapper.metricReceived.advise(lifetime, ::metricReceived)
 
         Disposer.register(AspireService.getInstance(project), consoleView)
 
         project.messageBus.syncPublisher(ResourceListener.TOPIC).resourceCreated(this)
-
-        lifetime.coroutineScope.launch(Dispatchers.Default) {
-            update()
-        }
     }
 
     private fun fillFromProperties(properties: Array<ResourceProperty>) {
@@ -186,19 +172,6 @@ class AspireResourceService(
         project.messageBus.syncPublisher(ServiceEventListener.TOPIC).handle(serviceEvent)
     }
 
-    private suspend fun update() {
-        while (true) {
-            delay(1.seconds)
-            val resourceMetricIds = withContext(Dispatchers.EDT) {
-                wrapper.getMetrics.startSuspending(lifetime, Unit)
-            }
-            for ((scopeName, metricName) in resourceMetricIds) {
-                val metrciNames = metricIds.computeIfAbsent(scopeName) { HashSet() }
-                metrciNames.add(metricName)
-            }
-        }
-    }
-
     private fun logReceived(log: ResourceLog) {
         consoleView.print(
             log.text + "\n",
@@ -206,11 +179,4 @@ class AspireResourceService(
             else ConsoleViewContentType.ERROR_OUTPUT
         )
     }
-
-    private fun metricReceived(metric: ResourceMetric) {
-        val key = AspireResourceMetricKey(metric.scope, metric.name)
-        metrics[key] = metric
-    }
-
-    fun getMetricsIds() = metricIds.toMap()
 }

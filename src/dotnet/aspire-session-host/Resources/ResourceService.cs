@@ -1,10 +1,8 @@
 ﻿using Aspire.V1;
 using AspireSessionHost.Generated;
-using AspireSessionHost.OTel;
 using Grpc.Core;
 using JetBrains.Lifetimes;
 using JetBrains.Rd.Base;
-using JetBrains.Rd.Tasks;
 using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Registry;
@@ -14,7 +12,6 @@ namespace AspireSessionHost.Resources;
 internal sealed class ResourceService(
     Connection connection,
     DashboardService.DashboardServiceClient client,
-    RdResourceManager resourceManager,
     ResiliencePipelineProvider<string> resiliencePipelineProvider,
     IOptions<ResourceServiceOptions> options,
     ILogger<ResourceService> logger
@@ -86,11 +83,6 @@ internal sealed class ResourceService(
             var resourceModel = resource.ToModel();
             var resourceWrapper = new ResourceWrapper();
             resourceWrapper.Model.SetValue(resourceModel);
-            resourceWrapper.GetMetrics.SetSync((_, _) =>
-            {
-                var resourceId = resourceWrapper.Model.Value.OTelResourceId;
-                return string.IsNullOrEmpty(resourceId) ? [] : resourceManager.GetResourceMetrics(resourceId);
-            });
 
             await connection.DoWithModel(model => { model.Resources.TryAdd(resourceModel.Name, resourceWrapper); });
         }

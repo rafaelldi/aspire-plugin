@@ -21,11 +21,10 @@ internal static class OTelServiceRegistration
         services.AddGrpcClient<MetricsService.MetricsServiceClient>(o => { o.Address = otelEndpointUrl; });
         services.AddGrpcClient<TraceService.TraceServiceClient>(o => { o.Address = otelEndpointUrl; });
 
-        services.AddSingleton<ResourceMetricService>();
         services.AddSingleton<SessionNodeService>();
 
-        services.AddSingleton<RdMetricService>();
-        services.AddSingleton<RdResourceManager>();
+        services.AddSingleton<MetricService>();
+        services.AddSingleton<OTelResourceManager>();
     }
 
     internal static async Task InitializeOTelServices(this IServiceProvider services)
@@ -34,13 +33,10 @@ internal static class OTelServiceRegistration
         var options = scope.ServiceProvider.GetRequiredService<IOptions<OTelServiceOptions>>().Value;
         if (options.EndpointUrl is null) return;
 
-        var sessionMetricService = scope.ServiceProvider.GetRequiredService<ResourceMetricService>();
-        await sessionMetricService.Initialize();
-
         var sessionNodeService = scope.ServiceProvider.GetRequiredService<SessionNodeService>();
         await sessionNodeService.Initialize();
 
-        var rdMetricsService = scope.ServiceProvider.GetRequiredService<RdMetricService>();
-        rdMetricsService.Initialize();
+        var metricsService = scope.ServiceProvider.GetRequiredService<MetricService>();
+        await metricsService.Initialize();
     }
 }

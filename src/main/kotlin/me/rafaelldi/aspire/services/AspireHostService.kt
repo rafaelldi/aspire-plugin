@@ -80,5 +80,5 @@ class AspireHostService(
     override fun getServiceDescriptor(
         project: Project,
         service: AspireResourceService
-    ) = AspireResourceServiceViewDescriptor(service)
+    ) = AspireResourceServiceViewDescriptor(service, project)
 }

@@ -3,13 +3,11 @@ package me.rafaelldi.aspire.services.components
 import com.intellij.ui.DoubleClickListener
 import com.intellij.ui.table.JBTable
 import me.rafaelldi.aspire.AspireBundle
-import me.rafaelldi.aspire.generated.ResourceMetric
 import me.rafaelldi.aspire.services.AspireResourceMetricKey
 import java.awt.event.MouseEvent
-import java.util.*
 import javax.swing.table.DefaultTableModel
 
-class MetricTable(private val parentPanel: ResourceMetricPanel) : JBTable() {
+class MetricTable(private val parentPanel: ResourceMetricComponent) : JBTable() {
     companion object {
         private val SCOPE_COLUMN = AspireBundle.getMessage("service.tab.metrics.table.scope")
         private val NAME_COLUMN = AspireBundle.getMessage("service.tab.metrics.table.name")
@@ -44,17 +42,17 @@ class MetricTable(private val parentPanel: ResourceMetricPanel) : JBTable() {
         parentPanel.metricSelected(scope, metric, value, unit)
     }
 
-    fun addOrUpdate(metrics: Map<AspireResourceMetricKey, ResourceMetric>) {
-        for (metric in metrics) {
-            val stringValue = String.format(Locale.ROOT, "%.2f", metric.value.value)
-            val row = metricRowMap[metric.key]
-            if (row != null) {
-                tableModel.setValueAt(stringValue, row, 2)
-            } else {
-                val newRow = arrayOf(metric.value.scope, metric.value.name, stringValue, metric.value.unit ?: "")
-                tableModel.addRow(newRow)
-                metricRowMap[metric.key] = (metricRowMap.values.maxOrNull() ?: -1) + 1
-            }
-        }
-    }
+//    fun addOrUpdate(metrics: Map<AspireResourceMetricKey, ResourceMetric>) {
+//        for (metric in metrics) {
+//            val stringValue = String.format(Locale.ROOT, "%.2f", metric.value.value)
+//            val row = metricRowMap[metric.key]
+//            if (row != null) {
+//                tableModel.setValueAt(stringValue, row, 2)
+//            } else {
+//                val newRow = arrayOf(metric.value.scope, metric.value.name, stringValue, metric.value.unit ?: "")
+//                tableModel.addRow(newRow)
+//                metricRowMap[metric.key] = (metricRowMap.values.maxOrNull() ?: -1) + 1
+//            }
+//        }
+//    }
 }
