@@ -13,12 +13,12 @@ import me.rafaelldi.aspire.generated.AspireSessionHostModel
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 
-class AspireHostService(
+class AspireHost(
     name: String,
     val projectPath: Path,
-) : ServiceViewProvidingContributor<AspireResourceService, AspireHostService> {
+) : ServiceViewProvidingContributor<AspireResource, AspireHost> {
 
-    private val viewDescriptor by lazy { AspireHostServiceViewDescriptor(this) }
+    private val viewDescriptor by lazy { AspireHostViewDescriptor(this) }
 
     val projectPathString = projectPath.absolutePathString()
 
@@ -36,7 +36,7 @@ class AspireHostService(
     var consoleView: ConsoleView? = null
         private set
 
-    fun startHost(
+    fun start(
         aspireHostDashboardUrl: String,
         sessionHostModel: AspireSessionHostModel,
         aspireHostServiceLifetime: Lifetime
@@ -47,7 +47,7 @@ class AspireHostService(
         lifetime = aspireHostServiceLifetime
     }
 
-    fun stopHost() {
+    fun stop() {
         isActive = false
         dashboardUrl = null
         model = null
@@ -72,13 +72,13 @@ class AspireHostService(
 
     override fun getServices(project: Project) =
         AspireServiceManager.getInstance(project)
-            .getResourceServices(projectPathString)
+            .getResources(projectPathString)
             .toMutableList()
 
     override fun asService() = this
 
     override fun getServiceDescriptor(
         project: Project,
-        service: AspireResourceService
-    ) = AspireResourceServiceViewDescriptor(service, project)
+        service: AspireResource
+    ) = AspireResourceViewDescriptor(service, project)
 }

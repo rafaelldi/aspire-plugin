@@ -35,13 +35,13 @@ class AspireServiceManager(private val project: Project) {
         private val LOG = logger<AspireServiceManager>()
     }
 
-    private val hostServices = ConcurrentHashMap<String, AspireHostService>()
-    private val resourceServices = ConcurrentHashMap<String, MutableMap<String, AspireResourceService>>()
+    private val hosts = ConcurrentHashMap<String, AspireHost>()
+    private val resources = ConcurrentHashMap<String, MutableMap<String, AspireResource>>()
 
-    fun getHostServices() = hostServices.values.toList()
-    fun getHostService(hostPath: String) = hostServices[hostPath]
-    fun getResourceServices(hostPath: String) =
-        resourceServices[hostPath]?.values
+    fun getHosts() = hosts.values.toList()
+    fun getHost(hostPath: String) = hosts[hostPath]
+    fun getResources(hostPath: String) =
+        resources[hostPath]?.values
             ?.asSequence()
             ?.filter { it.type != ResourceType.Unknown }
             ?.filter { it.state != ResourceState.Hidden }
@@ -51,58 +51,58 @@ class AspireServiceManager(private val project: Project) {
 
     private val serviceEventPublisher = project.messageBus.syncPublisher(ServiceEventListener.TOPIC)
 
-    fun addAspireHostService(host: AspireHostService) {
-        if (hostServices.containsKey(host.projectPathString)) return
+    fun addAspireHost(host: AspireHost) {
+        if (hosts.containsKey(host.projectPathString)) return
 
         LOG.trace("Adding a new Aspire host ${host.projectPathString}")
-        hostServices[host.projectPathString] = host
-        resourceServices[host.projectPathString] = mutableMapOf()
+        hosts[host.projectPathString] = host
+        resources[host.projectPathString] = mutableMapOf()
 
         val event = ServiceEventListener.ServiceEvent.createEvent(
             ServiceEventListener.EventType.SERVICE_ADDED,
             host,
-            AspireServiceContributor::class.java
+            AspireServiceViewContributor::class.java
         )
         serviceEventPublisher.handle(event)
     }
 
-    fun removeAspireHostService(hostPath: Path) {
+    fun removeAspireHost(hostPath: Path) {
         val hostPathString = hostPath.absolutePathString()
         LOG.trace("Removing the Aspire host $hostPathString")
 
-        val host = hostServices.remove(hostPathString)
-        resourceServices.remove(hostPathString)
+        val host = hosts.remove(hostPathString)
+        resources.remove(hostPathString)
         if (host == null) return
 
         val event = ServiceEventListener.ServiceEvent.createEvent(
             ServiceEventListener.EventType.SERVICE_REMOVED,
             host,
-            AspireServiceContributor::class.java
+            AspireServiceViewContributor::class.java
         )
         serviceEventPublisher.handle(event)
     }
 
-    fun updateAspireHostService(hostPath: Path, name: String) {
+    fun updateAspireHost(hostPath: Path, name: String) {
         val hostPathString = hostPath.absolutePathString()
         LOG.trace("Updating the Aspire host $hostPathString")
 
-        val host = hostServices[hostPathString] ?: return
+        val host = hosts[hostPathString] ?: return
         host.update(name)
 
         sendServiceChangedEvent(host)
     }
 
-    fun updateAspireHostService(hostPath: Path, executionResult: ExecutionResult) {
+    fun updateAspireHost(hostPath: Path, executionResult: ExecutionResult) {
         val hostPathString = hostPath.absolutePathString()
         LOG.trace("Setting the execution result to the Aspire host $hostPathString")
 
-        val host = hostServices[hostPathString] ?: return
+        val host = hosts[hostPathString] ?: return
         host.update(executionResult, project)
 
         sendServiceChangedEvent(host)
     }
 
-    suspend fun startAspireHostService(
+    suspend fun startAspireHost(
         aspireHostConfig: AspireHostConfig,
         sessionHostModel: AspireSessionHostModel
     ) {
@@ -111,22 +111,22 @@ class AspireServiceManager(private val project: Project) {
 
         val aspireHostServiceLifetime = aspireHostConfig.aspireHostLifetime.createNested()
 
-        val hostService = hostServices[hostPathString] ?: return
+        val hostService = hosts[hostPathString] ?: return
 
         val serviceViewManager = ServiceViewManager.getInstance(project)
         withContext(Dispatchers.EDT) {
-            serviceViewManager.select(hostService, AspireServiceContributor::class.java, true, true)
+            serviceViewManager.select(hostService, AspireServiceViewContributor::class.java, true, true)
         }
 
         aspireHostServiceLifetime.bracketIfAlive({
-            hostService.startHost(
+            hostService.start(
                 aspireHostConfig.aspireHostProjectUrl,
                 sessionHostModel,
                 aspireHostServiceLifetime
             )
             sendServiceChangedEvent(hostService)
         }, {
-            hostService.stopHost()
+            hostService.stop()
             sendServiceChangedEvent(hostService)
         })
 
@@ -137,11 +137,11 @@ class AspireServiceManager(private val project: Project) {
         }
     }
 
-    private fun sendServiceChangedEvent(host: AspireHostService) {
+    private fun sendServiceChangedEvent(host: AspireHost) {
         val event = ServiceEventListener.ServiceEvent.createEvent(
             ServiceEventListener.EventType.SERVICE_CHANGED,
             host,
-            AspireServiceContributor::class.java
+            AspireServiceViewContributor::class.java
         )
         serviceEventPublisher.handle(event)
     }
@@ -150,18 +150,18 @@ class AspireServiceManager(private val project: Project) {
         resourceId: String,
         resource: ResourceWrapper,
         resourceLifetime: Lifetime,
-        hostService: AspireHostService
+        hostService: AspireHost
     ) {
         LOG.trace("Adding a new resource $resourceId")
 
-        val resourcesByHost = resourceServices[hostService.projectPathString] ?: return
+        val resourcesByHost = resources[hostService.projectPathString] ?: return
 
-        val resourceService = AspireResourceService(resource, resourceLifetime, hostService, project)
+        val resourceService = AspireResource(resource, resourceLifetime, hostService, project)
         resourcesByHost.addUnique(resourceLifetime, resourceId, resourceService)
 
         val serviceViewManager = ServiceViewManager.getInstance(project)
         application.invokeLater {
-            serviceViewManager.expand(hostService, AspireServiceContributor::class.java)
+            serviceViewManager.expand(hostService, AspireServiceViewContributor::class.java)
         }
 
         resource.isInitialized.set(true)
@@ -173,11 +173,11 @@ class AspireServiceManager(private val project: Project) {
         })
     }
 
-    private fun sendServiceStructureChangedEvent(host: AspireHostService) {
+    private fun sendServiceStructureChangedEvent(host: AspireHost) {
         val serviceEvent = ServiceEventListener.ServiceEvent.createEvent(
             ServiceEventListener.EventType.SERVICE_STRUCTURE_CHANGED,
             host,
-            AspireServiceContributor::class.java
+            AspireServiceViewContributor::class.java
         )
         project.messageBus.syncPublisher(ServiceEventListener.TOPIC).handle(serviceEvent)
     }
@@ -189,8 +189,8 @@ class AspireServiceManager(private val project: Project) {
             val params = configuration.parameters
             val projectPath = Path(params.projectFilePath)
             val name = projectPath.nameWithoutExtension
-            val host = AspireHostService(name, projectPath)
-            getInstance(project).addAspireHostService(host)
+            val host = AspireHost(name, projectPath)
+            getInstance(project).addAspireHost(host)
         }
 
         override fun runConfigurationChanged(settings: RunnerAndConfigurationSettings) {
@@ -199,7 +199,7 @@ class AspireServiceManager(private val project: Project) {
             val params = configuration.parameters
             val projectPath = Path(params.projectFilePath)
             val name = projectPath.nameWithoutExtension
-            getInstance(project).updateAspireHostService(projectPath, name)
+            getInstance(project).updateAspireHost(projectPath, name)
         }
 
         override fun runConfigurationRemoved(settings: RunnerAndConfigurationSettings) {
@@ -207,7 +207,7 @@ class AspireServiceManager(private val project: Project) {
             if (configuration !is AspireHostConfiguration) return
             val params = configuration.parameters
             val projectPath = Path(params.projectFilePath)
-            getInstance(project).removeAspireHostService(projectPath)
+            getInstance(project).removeAspireHost(projectPath)
         }
     }
 }

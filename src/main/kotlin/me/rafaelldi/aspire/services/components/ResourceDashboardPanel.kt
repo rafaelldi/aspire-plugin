@@ -14,11 +14,11 @@ import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
 import me.rafaelldi.aspire.AspireBundle
 import me.rafaelldi.aspire.generated.ResourceType
-import me.rafaelldi.aspire.services.AspireResourceService
+import me.rafaelldi.aspire.services.AspireResource
 import me.rafaelldi.aspire.util.getIcon
 import kotlin.io.path.absolutePathString
 
-class ResourceDashboardPanel(resourceService: AspireResourceService) : BorderLayoutPanel() {
+class ResourceDashboardPanel(resourceService: AspireResource) : BorderLayoutPanel() {
     private var panel = setUpPanel(resourceService)
 
     init {
@@ -26,7 +26,7 @@ class ResourceDashboardPanel(resourceService: AspireResourceService) : BorderLay
         add(ScrollPaneFactory.createScrollPane(panel, SideBorder.NONE))
     }
 
-    private fun setUpPanel(resourceData: AspireResourceService): DialogPanel = panel {
+    private fun setUpPanel(resourceData: AspireResource): DialogPanel = panel {
         row {
             val resourceIcon = getIcon(resourceData.type, resourceData.state)
             icon(resourceIcon)

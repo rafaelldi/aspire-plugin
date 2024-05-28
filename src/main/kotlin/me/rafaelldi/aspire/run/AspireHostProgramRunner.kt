@@ -31,6 +31,7 @@ import me.rafaelldi.aspire.util.*
 import org.jetbrains.concurrency.Promise
 import org.jetbrains.concurrency.asPromise
 import kotlin.io.path.Path
+import kotlin.io.path.absolutePathString
 
 class AspireHostProgramRunner : DotNetProgramRunner() {
     companion object {
@@ -94,10 +95,10 @@ class AspireHostProgramRunner : DotNetProgramRunner() {
             val sessionHostModel = protocol.aspireSessionHostModel
 
             AspireServiceManager.getInstance(environment.project)
-                .startAspireHostService(config, sessionHostModel)
+                .startAspireHost(config, sessionHostModel)
 
             OTelService.getInstance(environment.project)
-                .addOTelHost(config, sessionHostModel)
+                .addOTelServer(config.aspireHostProjectPath.absolutePathString(), sessionHostModel)
 
             SessionHostManager.getInstance(environment.project)
                 .startSessionHost(config, protocol.wire.serverPort, sessionHostModel)
@@ -107,7 +108,7 @@ class AspireHostProgramRunner : DotNetProgramRunner() {
             val executionResult = state.execute(environment.executor, this)
 
             AspireServiceManager.getInstance(environment.project)
-                .updateAspireHostService(config.aspireHostProjectPath, executionResult)
+                .updateAspireHost(config.aspireHostProjectPath, executionResult)
 
             val processHandler = executionResult.processHandler
             aspireHostLifetime.onTermination {

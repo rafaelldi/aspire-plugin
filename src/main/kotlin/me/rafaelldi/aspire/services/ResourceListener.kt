@@ -8,6 +8,6 @@ interface ResourceListener {
         val TOPIC = Topic.create("Aspire Resource Listener", ResourceListener::class.java)
     }
 
-    fun resourceCreated(resource: AspireResourceService)
-    fun resourceUpdated(resource: AspireResourceService)
+    fun resourceCreated(resource: AspireResource)
+    fun resourceUpdated(resource: AspireResource)
 }

@@ -17,8 +17,8 @@ import me.rafaelldi.aspire.util.ASPIRE_HOST_PATH
 import java.awt.BorderLayout
 import javax.swing.JPanel
 
-class AspireHostServiceViewDescriptor(
-    private val hostService: AspireHostService
+class AspireHostViewDescriptor(
+    private val hostService: AspireHost
 ) : ServiceViewDescriptor, DataProvider {
 
     private val toolbarActions = DefaultActionGroup(

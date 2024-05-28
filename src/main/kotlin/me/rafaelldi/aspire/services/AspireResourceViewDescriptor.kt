@@ -22,8 +22,8 @@ import me.rafaelldi.aspire.util.getIcon
 import java.awt.BorderLayout
 import javax.swing.JPanel
 
-class AspireResourceServiceViewDescriptor(
-    private val resourceService: AspireResourceService,
+class AspireResourceViewDescriptor(
+    private val resourceService: AspireResource,
     project: Project
 ) : ServiceViewDescriptor, DataProvider {
 

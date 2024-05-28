@@ -17,10 +17,10 @@ import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.math.roundToInt
 
-class AspireResourceService(
+class AspireResource(
     wrapper: ResourceWrapper,
     val lifetime: Lifetime,
-    private val hostService: AspireHostService,
+    private val host: AspireHost,
     private val project: Project
 ) {
     var uid: String
@@ -65,7 +65,7 @@ class AspireResourceService(
     var containerArgs: String? = null
         private set
 
-    val hostProjectPath = hostService.projectPathString
+    val hostProjectPath = host.projectPathString
 
     val consoleView: ConsoleView = TextConsoleBuilderFactory
         .getInstance()
@@ -166,8 +166,8 @@ class AspireResourceService(
 
         val serviceEvent = ServiceEventListener.ServiceEvent.createEvent(
             ServiceEventListener.EventType.SERVICE_CHILDREN_CHANGED,
-            hostService,
-            AspireServiceContributor::class.java
+            host,
+            AspireServiceViewContributor::class.java
         )
         project.messageBus.syncPublisher(ServiceEventListener.TOPIC).handle(serviceEvent)
     }

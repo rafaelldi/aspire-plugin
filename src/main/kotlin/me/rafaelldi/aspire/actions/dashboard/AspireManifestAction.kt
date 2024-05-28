@@ -13,7 +13,7 @@ class AspireManifestAction : AnAction() {
         val hostPath = event.getData(ASPIRE_HOST_PATH) ?: return
         val hostService = AspireServiceManager
             .getInstance(project)
-            .getHostService(hostPath)
+            .getHost(hostPath)
             ?: return
         val hostProjectPath = hostService.projectPath
 
@@ -30,7 +30,7 @@ class AspireManifestAction : AnAction() {
 
         val hostService = AspireServiceManager
             .getInstance(project)
-            .getHostService(hostPath)
+            .getHost(hostPath)
         if (hostService == null) {
             event.presentation.isEnabledAndVisible = false
             return

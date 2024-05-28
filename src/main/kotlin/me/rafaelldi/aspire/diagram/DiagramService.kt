@@ -21,7 +21,7 @@ import kotlinx.coroutines.withContext
 import me.rafaelldi.aspire.actions.chart.PopupAction
 import me.rafaelldi.aspire.actions.chart.ShowHideGroupsAction
 import me.rafaelldi.aspire.generated.TraceNode
-import me.rafaelldi.aspire.services.AspireHostService
+import me.rafaelldi.aspire.services.AspireHost
 import java.awt.Color
 
 @Service(Service.Level.PROJECT)
@@ -34,7 +34,7 @@ class DiagramService(private val project: Project) {
 
     private val diagramStates = mutableMapOf<String, DiagramState>()
 
-    suspend fun showDiagram(hostService: AspireHostService) {
+    suspend fun showDiagram(hostService: AspireHost) {
         val model = hostService.model ?: return
         val lifetime = hostService.lifetime ?: return
         val nodes = withContext(Dispatchers.EDT) {

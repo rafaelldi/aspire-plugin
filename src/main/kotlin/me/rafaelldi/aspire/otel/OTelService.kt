@@ -22,27 +22,26 @@ class OTelService(private val project: Project) {
         private val LOG = logger<OTelService>()
     }
 
-    private val hosts = ConcurrentHashMap<String, AspireSessionHostModel>()
+    private val oTelServers = ConcurrentHashMap<String, AspireSessionHostModel>()
 
-    fun addOTelHost(
-        aspireHostConfig: AspireHostConfig,
+    fun addOTelServer(
+        key: String,
         sessionHostModel: AspireSessionHostModel
     ) {
-        val hostPathString = aspireHostConfig.aspireHostProjectPath.absolutePathString()
-        if (hosts.containsKey(hostPathString)) return
+        if (oTelServers.containsKey(key)) return
 
-        LOG.trace("Saving OpenTelemetry host for $hostPathString")
-        hosts[hostPathString] = sessionHostModel
+        LOG.trace("Saving OpenTelemetry host for $key")
+        oTelServers[key] = sessionHostModel
     }
 
     fun subscribeToMetricIds(
-        hostProjectPath: String,
+        key: String,
         resourceId: String,
         lifetime: Lifetime,
         subscribeAction: (MetricId) -> Unit
     ) {
-        val model = hosts[hostProjectPath] ?: return
-        model.metricIds.adviseAddRemove(lifetime, { action, _, metricId ->
+        val model = oTelServers[key] ?: return
+        model.metricIds.adviseAddRemove(lifetime) { action, _, metricId ->
             when (action) {
                 AddRemove.Add -> {
                     if (!metricId.resourceId.equals(resourceId, true)) return@adviseAddRemove
@@ -51,17 +50,17 @@ class OTelService(private val project: Project) {
 
                 AddRemove.Remove -> {}
             }
-        })
+        }
     }
 
     fun subscribeToMetricValues(
-        hostProjectPath: String,
+        key: String,
         resourceId: String,
         metricId: MetricId,
         lifetime: Lifetime,
         subscribeAction: (ResourceMetric) -> Unit
     ) {
-        val model = hosts[hostProjectPath] ?: return
+        val model = oTelServers[key] ?: return
         val resourceMetricId = ResourceMetricId(resourceId, metricId.scopeName, metricId.metricName)
         model.metricReceived.advise(lifetime) {
             if (it.id != resourceMetricId) return@advise

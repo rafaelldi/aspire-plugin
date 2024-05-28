@@ -19,7 +19,7 @@
         <configurationType implementation="me.rafaelldi.aspire.run.AspireHostConfigurationType"/>
         <programRunner implementation="me.rafaelldi.aspire.run.AspireHostProgramRunner"/>
 
-        <serviceViewContributor implementation="me.rafaelldi.aspire.services.AspireServiceContributor"/>
+        <serviceViewContributor implementation="me.rafaelldi.aspire.services.AspireServiceViewContributor"/>
 
         <applicationConfigurable
                 parentId="tools"

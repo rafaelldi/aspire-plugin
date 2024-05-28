@@ -14,10 +14,10 @@ import me.rafaelldi.aspire.AspireBundle
 import me.rafaelldi.aspire.otel.MetricId
 import me.rafaelldi.aspire.otel.OTelService
 import me.rafaelldi.aspire.services.AspireResourceMetricKey
-import me.rafaelldi.aspire.services.AspireResourceService
+import me.rafaelldi.aspire.services.AspireResource
 
 class ResourceMetricComponent(
-    private val resourceService: AspireResourceService,
+    private val resourceService: AspireResource,
     private val project: Project
 ) {
     private val tree = MetricTree(this)

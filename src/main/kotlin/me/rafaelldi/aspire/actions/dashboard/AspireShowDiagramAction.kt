@@ -16,7 +16,7 @@ class AspireShowDiagramAction : AnAction() {
         val hostPath = event.getData(ASPIRE_HOST_PATH) ?: return
         val hostService = AspireServiceManager
             .getInstance(project)
-            .getHostService(hostPath)
+            .getHost(hostPath)
             ?: return
         if (!hostService.isActive) return
 
@@ -36,7 +36,7 @@ class AspireShowDiagramAction : AnAction() {
 
         val hostService = AspireServiceManager
             .getInstance(project)
-            .getHostService(hostPath)
+            .getHost(hostPath)
         if (hostService == null || !hostService.isActive) {
             event.presentation.isEnabledAndVisible = false
             return
