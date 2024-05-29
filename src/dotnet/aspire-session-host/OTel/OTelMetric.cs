@@ -19,7 +19,7 @@ internal sealed class OTelMetric(string ScopeName, string MetricName, OTelMetric
     internal string Description => description;
     internal string Unit => unit;
 
-    private ConcurrentDictionary<int, OTelMetricStream> _streams = new();
+    private readonly ConcurrentDictionary<int, OTelMetricStream> _streams = new();
 
     internal void AddMetricValue(Metric metric)
     {
@@ -85,4 +85,6 @@ internal sealed class OTelMetric(string ScopeName, string MetricName, OTelMetric
 
         return newStream;
     }
+
+    internal OTelMetricStream? GetMetricStream() => _streams.Values.FirstOrDefault();
 }

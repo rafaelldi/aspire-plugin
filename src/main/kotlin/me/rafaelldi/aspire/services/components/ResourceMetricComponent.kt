@@ -10,14 +10,16 @@ import com.intellij.util.ui.components.BorderLayoutPanel
 import com.jetbrains.rd.util.lifetime.SequentialLifetimes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rafaelldi.aspire.AspireBundle
-import me.rafaelldi.aspire.generated.ResourceMetricId
+import me.rafaelldi.aspire.generated.*
 import me.rafaelldi.aspire.otel.MetricId
 import me.rafaelldi.aspire.otel.OTelService
 import me.rafaelldi.aspire.services.AspireResource
+import kotlin.time.Duration.Companion.seconds
 
 class ResourceMetricComponent(
     private val resourceService: AspireResource,
@@ -41,7 +43,7 @@ class ResourceMetricComponent(
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
         extraBufferCapacity = 100
     )
-    
+
     private val subscriptionLifetimes = SequentialLifetimes(resourceService.lifetime)
 
     init {
@@ -83,7 +85,7 @@ class ResourceMetricComponent(
         val lifetime = subscriptionLifetimes.next()
         val resourceMetricId = ResourceMetricId(resourceId, metricId.scopeName, metricId.metricName)
 
-        resourceService.lifetime.coroutineScope.launch {
+        lifetime.coroutineScope.launch {
             val metricDetails = withContext(Dispatchers.EDT) {
                 service.getMetricDetails(hostProjectPath, resourceMetricId)
             } ?: return@launch
@@ -91,14 +93,28 @@ class ResourceMetricComponent(
             chartPanel = ResourceMetricChartPanel(metricDetails, 0.0)
             splitter.secondComponent = chartPanel
 
-            withContext(Dispatchers.EDT) {
-                service.subscribeToMetricValues(
-                    hostProjectPath,
-                    resourceMetricId,
-                    lifetime
-                ) {
-                    val i = 0
-                }
+            while (true) {
+                delay(1.seconds)
+                val currentPoint = withContext(Dispatchers.EDT) {
+                    service.getCurrentMetricPoint(hostProjectPath, resourceMetricId)
+                } ?: continue
+                updateChart(currentPoint)
+            }
+        }
+    }
+
+    private fun updateChart(point: ResourceMetricPoint) {
+        when (point) {
+            is LongResourceMetricPoint -> {
+
+            }
+
+            is DoubleResourceMetricPoint -> {
+
+            }
+
+            is HistogramResourceMetricPoint -> {
+
             }
         }
     }

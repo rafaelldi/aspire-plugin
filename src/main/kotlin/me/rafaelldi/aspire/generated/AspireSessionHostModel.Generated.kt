@@ -26,9 +26,8 @@ class AspireSessionHostModel private constructor(
     private val _logReceived: RdSignal<LogReceived>,
     private val _resources: RdMap<String, ResourceWrapper>,
     private val _metricIds: RdList<ResourceMetricId>,
-    private val _metricSubscriptions: RdList<ResourceMetricId>,
-    private val _metricReceived: RdSignal<ResourceMetric>,
     private val _getMetricDetails: RdCall<ResourceMetricId, ResourceMetricDetails?>,
+    private val _getCurrentMetricPoint: RdCall<ResourceMetricId, ResourceMetricPoint?>,
     private val _getTraceNodes: RdCall<Unit, Array<TraceNode>>
 ) : RdExtBase() {
     //companion
@@ -51,6 +50,9 @@ class AspireSessionHostModel private constructor(
             serializers.register(LazyCompanionMarshaller(RdId(552742225967985219), classLoader, "me.rafaelldi.aspire.generated.ResourceLog"))
             serializers.register(LazyCompanionMarshaller(RdId(1247681850264996684), classLoader, "me.rafaelldi.aspire.generated.ResourceMetricId"))
             serializers.register(LazyCompanionMarshaller(RdId(-218950389162186063), classLoader, "me.rafaelldi.aspire.generated.ResourceMetricDetails"))
+            serializers.register(LazyCompanionMarshaller(RdId(-9180196452739352797), classLoader, "me.rafaelldi.aspire.generated.LongResourceMetricPoint"))
+            serializers.register(LazyCompanionMarshaller(RdId(-8134866584907683730), classLoader, "me.rafaelldi.aspire.generated.DoubleResourceMetricPoint"))
+            serializers.register(LazyCompanionMarshaller(RdId(-5094345987098879359), classLoader, "me.rafaelldi.aspire.generated.HistogramResourceMetricPoint"))
             serializers.register(LazyCompanionMarshaller(RdId(-6198804010362039727), classLoader, "me.rafaelldi.aspire.generated.ResourceMetric"))
             serializers.register(LazyCompanionMarshaller(RdId(577221124058644), classLoader, "me.rafaelldi.aspire.generated.TraceNode"))
             serializers.register(LazyCompanionMarshaller(RdId(-2931968979041238168), classLoader, "me.rafaelldi.aspire.generated.TraceNodeChild"))
@@ -58,6 +60,7 @@ class AspireSessionHostModel private constructor(
             serializers.register(LazyCompanionMarshaller(RdId(-1311735068701761509), classLoader, "me.rafaelldi.aspire.generated.ResourceType"))
             serializers.register(LazyCompanionMarshaller(RdId(-3770298982336589872), classLoader, "me.rafaelldi.aspire.generated.ResourceState"))
             serializers.register(LazyCompanionMarshaller(RdId(-15935776453165119), classLoader, "me.rafaelldi.aspire.generated.ResourceStateStyle"))
+            serializers.register(LazyCompanionMarshaller(RdId(8257349844884281770), classLoader, "me.rafaelldi.aspire.generated.ResourceMetricPoint_Unknown"))
         }
         
         
@@ -79,9 +82,10 @@ class AspireSessionHostModel private constructor(
         
         private val __SessionCreationResultNullableSerializer = SessionCreationResult.nullable()
         private val __ResourceMetricDetailsNullableSerializer = ResourceMetricDetails.nullable()
+        private val __ResourceMetricPointNullableSerializer = AbstractPolymorphic(ResourceMetricPoint).nullable()
         private val __TraceNodeArraySerializer = TraceNode.array()
         
-        const val serializationHash = 3278040736253536989L
+        const val serializationHash = 2654817673960334121L
         
     }
     override val serializersOwner: ISerializersOwner get() = AspireSessionHostModel
@@ -95,15 +99,13 @@ class AspireSessionHostModel private constructor(
     val logReceived: ISignal<LogReceived> get() = _logReceived
     val resources: IMutableViewableMap<String, ResourceWrapper> get() = _resources
     val metricIds: IMutableViewableList<ResourceMetricId> get() = _metricIds
-    val metricSubscriptions: IMutableViewableList<ResourceMetricId> get() = _metricSubscriptions
-    val metricReceived: ISource<ResourceMetric> get() = _metricReceived
     val getMetricDetails: IRdCall<ResourceMetricId, ResourceMetricDetails?> get() = _getMetricDetails
+    val getCurrentMetricPoint: IRdCall<ResourceMetricId, ResourceMetricPoint?> get() = _getCurrentMetricPoint
     val getTraceNodes: IRdCall<Unit, Array<TraceNode>> get() = _getTraceNodes
     //methods
     //initializer
     init {
         _metricIds.optimizeNested = true
-        _metricSubscriptions.optimizeNested = true
     }
     
     init {
@@ -114,9 +116,8 @@ class AspireSessionHostModel private constructor(
         bindableChildren.add("logReceived" to _logReceived)
         bindableChildren.add("resources" to _resources)
         bindableChildren.add("metricIds" to _metricIds)
-        bindableChildren.add("metricSubscriptions" to _metricSubscriptions)
-        bindableChildren.add("metricReceived" to _metricReceived)
         bindableChildren.add("getMetricDetails" to _getMetricDetails)
+        bindableChildren.add("getCurrentMetricPoint" to _getCurrentMetricPoint)
         bindableChildren.add("getTraceNodes" to _getTraceNodes)
     }
     
@@ -130,9 +131,8 @@ class AspireSessionHostModel private constructor(
         RdSignal<LogReceived>(LogReceived),
         RdMap<String, ResourceWrapper>(FrameworkMarshallers.String, ResourceWrapper),
         RdList<ResourceMetricId>(ResourceMetricId),
-        RdList<ResourceMetricId>(ResourceMetricId),
-        RdSignal<ResourceMetric>(ResourceMetric),
         RdCall<ResourceMetricId, ResourceMetricDetails?>(ResourceMetricId, __ResourceMetricDetailsNullableSerializer),
+        RdCall<ResourceMetricId, ResourceMetricPoint?>(ResourceMetricId, __ResourceMetricPointNullableSerializer),
         RdCall<Unit, Array<TraceNode>>(FrameworkMarshallers.Void, __TraceNodeArraySerializer)
     )
     
@@ -149,9 +149,8 @@ class AspireSessionHostModel private constructor(
             print("logReceived = "); _logReceived.print(printer); println()
             print("resources = "); _resources.print(printer); println()
             print("metricIds = "); _metricIds.print(printer); println()
-            print("metricSubscriptions = "); _metricSubscriptions.print(printer); println()
-            print("metricReceived = "); _metricReceived.print(printer); println()
             print("getMetricDetails = "); _getMetricDetails.print(printer); println()
+            print("getCurrentMetricPoint = "); _getCurrentMetricPoint.print(printer); println()
             print("getTraceNodes = "); _getTraceNodes.print(printer); println()
         }
         printer.print(")")
@@ -166,9 +165,8 @@ class AspireSessionHostModel private constructor(
             _logReceived.deepClonePolymorphic(),
             _resources.deepClonePolymorphic(),
             _metricIds.deepClonePolymorphic(),
-            _metricSubscriptions.deepClonePolymorphic(),
-            _metricReceived.deepClonePolymorphic(),
             _getMetricDetails.deepClonePolymorphic(),
+            _getCurrentMetricPoint.deepClonePolymorphic(),
             _getTraceNodes.deepClonePolymorphic()
         )
     }
@@ -178,6 +176,138 @@ class AspireSessionHostModel private constructor(
 }
 val IProtocol.aspireSessionHostModel get() = getOrCreateExtension(AspireSessionHostModel::class) { @Suppress("DEPRECATION") AspireSessionHostModel.create(lifetime, this) }
 
+
+
+/**
+ * #### Generated from [AspireSessionHostModel.kt:132]
+ */
+class DoubleResourceMetricPoint (
+    val value: Double,
+    timestamp: Long
+) : ResourceMetricPoint (
+    timestamp
+) {
+    //companion
+    
+    companion object : IMarshaller<DoubleResourceMetricPoint> {
+        override val _type: KClass<DoubleResourceMetricPoint> = DoubleResourceMetricPoint::class
+        override val id: RdId get() = RdId(-8134866584907683730)
+        
+        @Suppress("UNCHECKED_CAST")
+        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): DoubleResourceMetricPoint  {
+            val timestamp = buffer.readLong()
+            val value = buffer.readDouble()
+            return DoubleResourceMetricPoint(value, timestamp)
+        }
+        
+        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: DoubleResourceMetricPoint)  {
+            buffer.writeLong(value.timestamp)
+            buffer.writeDouble(value.value)
+        }
+        
+        
+    }
+    //fields
+    //methods
+    //initializer
+    //secondary constructor
+    //equals trait
+    override fun equals(other: Any?): Boolean  {
+        if (this === other) return true
+        if (other == null || other::class != this::class) return false
+        
+        other as DoubleResourceMetricPoint
+        
+        if (value != other.value) return false
+        if (timestamp != other.timestamp) return false
+        
+        return true
+    }
+    //hash code trait
+    override fun hashCode(): Int  {
+        var __r = 0
+        __r = __r*31 + value.hashCode()
+        __r = __r*31 + timestamp.hashCode()
+        return __r
+    }
+    //pretty print
+    override fun print(printer: PrettyPrinter)  {
+        printer.println("DoubleResourceMetricPoint (")
+        printer.indent {
+            print("value = "); value.print(printer); println()
+            print("timestamp = "); timestamp.print(printer); println()
+        }
+        printer.print(")")
+    }
+    
+    override fun toString() = PrettyPrinter().singleLine().also { print(it) }.toString()
+    //deepClone
+    //contexts
+    //threading
+}
+
+
+/**
+ * #### Generated from [AspireSessionHostModel.kt:136]
+ */
+class HistogramResourceMetricPoint (
+    timestamp: Long
+) : ResourceMetricPoint (
+    timestamp
+) {
+    //companion
+    
+    companion object : IMarshaller<HistogramResourceMetricPoint> {
+        override val _type: KClass<HistogramResourceMetricPoint> = HistogramResourceMetricPoint::class
+        override val id: RdId get() = RdId(-5094345987098879359)
+        
+        @Suppress("UNCHECKED_CAST")
+        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): HistogramResourceMetricPoint  {
+            val timestamp = buffer.readLong()
+            return HistogramResourceMetricPoint(timestamp)
+        }
+        
+        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: HistogramResourceMetricPoint)  {
+            buffer.writeLong(value.timestamp)
+        }
+        
+        
+    }
+    //fields
+    //methods
+    //initializer
+    //secondary constructor
+    //equals trait
+    override fun equals(other: Any?): Boolean  {
+        if (this === other) return true
+        if (other == null || other::class != this::class) return false
+        
+        other as HistogramResourceMetricPoint
+        
+        if (timestamp != other.timestamp) return false
+        
+        return true
+    }
+    //hash code trait
+    override fun hashCode(): Int  {
+        var __r = 0
+        __r = __r*31 + timestamp.hashCode()
+        return __r
+    }
+    //pretty print
+    override fun print(printer: PrettyPrinter)  {
+        printer.println("HistogramResourceMetricPoint (")
+        printer.indent {
+            print("timestamp = "); timestamp.print(printer); println()
+        }
+        printer.print(")")
+    }
+    
+    override fun toString() = PrettyPrinter().singleLine().also { print(it) }.toString()
+    //deepClone
+    //contexts
+    //threading
+}
 
 
 /**
@@ -245,6 +375,75 @@ data class LogReceived (
         }
         printer.print(")")
     }
+    //deepClone
+    //contexts
+    //threading
+}
+
+
+/**
+ * #### Generated from [AspireSessionHostModel.kt:128]
+ */
+class LongResourceMetricPoint (
+    val value: Long,
+    timestamp: Long
+) : ResourceMetricPoint (
+    timestamp
+) {
+    //companion
+    
+    companion object : IMarshaller<LongResourceMetricPoint> {
+        override val _type: KClass<LongResourceMetricPoint> = LongResourceMetricPoint::class
+        override val id: RdId get() = RdId(-9180196452739352797)
+        
+        @Suppress("UNCHECKED_CAST")
+        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): LongResourceMetricPoint  {
+            val timestamp = buffer.readLong()
+            val value = buffer.readLong()
+            return LongResourceMetricPoint(value, timestamp)
+        }
+        
+        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: LongResourceMetricPoint)  {
+            buffer.writeLong(value.timestamp)
+            buffer.writeLong(value.value)
+        }
+        
+        
+    }
+    //fields
+    //methods
+    //initializer
+    //secondary constructor
+    //equals trait
+    override fun equals(other: Any?): Boolean  {
+        if (this === other) return true
+        if (other == null || other::class != this::class) return false
+        
+        other as LongResourceMetricPoint
+        
+        if (value != other.value) return false
+        if (timestamp != other.timestamp) return false
+        
+        return true
+    }
+    //hash code trait
+    override fun hashCode(): Int  {
+        var __r = 0
+        __r = __r*31 + value.hashCode()
+        __r = __r*31 + timestamp.hashCode()
+        return __r
+    }
+    //pretty print
+    override fun print(printer: PrettyPrinter)  {
+        printer.println("LongResourceMetricPoint (")
+        printer.indent {
+            print("value = "); value.print(printer); println()
+            print("timestamp = "); timestamp.print(printer); println()
+        }
+        printer.print(")")
+    }
+    
+    override fun toString() = PrettyPrinter().singleLine().also { print(it) }.toString()
     //deepClone
     //contexts
     //threading
@@ -518,7 +717,7 @@ data class ResourceLog (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:124]
+ * #### Generated from [AspireSessionHostModel.kt:140]
  */
 data class ResourceMetric (
     val id: ResourceMetricId,
@@ -724,6 +923,100 @@ data class ResourceMetricId (
         }
         printer.print(")")
     }
+    //deepClone
+    //contexts
+    //threading
+}
+
+
+/**
+ * #### Generated from [AspireSessionHostModel.kt:124]
+ */
+abstract class ResourceMetricPoint (
+    val timestamp: Long
+) : IPrintable {
+    //companion
+    
+    companion object : IAbstractDeclaration<ResourceMetricPoint> {
+        override fun readUnknownInstance(ctx: SerializationCtx, buffer: AbstractBuffer, unknownId: RdId, size: Int): ResourceMetricPoint  {
+            val objectStartPosition = buffer.position
+            val timestamp = buffer.readLong()
+            val unknownBytes = ByteArray(objectStartPosition + size - buffer.position)
+            buffer.readByteArrayRaw(unknownBytes)
+            return ResourceMetricPoint_Unknown(timestamp, unknownId, unknownBytes)
+        }
+        
+        
+    }
+    //fields
+    //methods
+    //initializer
+    //secondary constructor
+    //equals trait
+    //hash code trait
+    //pretty print
+    //deepClone
+    //contexts
+    //threading
+}
+
+
+class ResourceMetricPoint_Unknown (
+    timestamp: Long,
+    override val unknownId: RdId,
+    val unknownBytes: ByteArray
+) : ResourceMetricPoint (
+    timestamp
+), IUnknownInstance {
+    //companion
+    
+    companion object : IMarshaller<ResourceMetricPoint_Unknown> {
+        override val _type: KClass<ResourceMetricPoint_Unknown> = ResourceMetricPoint_Unknown::class
+        override val id: RdId get() = RdId(8257349844884281770)
+        
+        @Suppress("UNCHECKED_CAST")
+        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ResourceMetricPoint_Unknown  {
+            throw NotImplementedError("Unknown instances should not be read via serializer")
+        }
+        
+        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ResourceMetricPoint_Unknown)  {
+            buffer.writeLong(value.timestamp)
+            buffer.writeByteArrayRaw(value.unknownBytes)
+        }
+        
+        
+    }
+    //fields
+    //methods
+    //initializer
+    //secondary constructor
+    //equals trait
+    override fun equals(other: Any?): Boolean  {
+        if (this === other) return true
+        if (other == null || other::class != this::class) return false
+        
+        other as ResourceMetricPoint_Unknown
+        
+        if (timestamp != other.timestamp) return false
+        
+        return true
+    }
+    //hash code trait
+    override fun hashCode(): Int  {
+        var __r = 0
+        __r = __r*31 + timestamp.hashCode()
+        return __r
+    }
+    //pretty print
+    override fun print(printer: PrettyPrinter)  {
+        printer.println("ResourceMetricPoint_Unknown (")
+        printer.indent {
+            print("timestamp = "); timestamp.print(printer); println()
+        }
+        printer.print(")")
+    }
+    
+    override fun toString() = PrettyPrinter().singleLine().also { print(it) }.toString()
     //deepClone
     //contexts
     //threading
@@ -1370,7 +1663,7 @@ data class SessionModel (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:130]
+ * #### Generated from [AspireSessionHostModel.kt:146]
  */
 data class TraceNode (
     val id: String,
@@ -1453,7 +1746,7 @@ data class TraceNode (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:143]
+ * #### Generated from [AspireSessionHostModel.kt:159]
  */
 data class TraceNodeAttribute (
     val key: String,
@@ -1518,7 +1811,7 @@ data class TraceNodeAttribute (
 
 
 /**
- * #### Generated from [AspireSessionHostModel.kt:138]
+ * #### Generated from [AspireSessionHostModel.kt:154]
  */
 data class TraceNodeChild (
     val id: String,

@@ -121,6 +121,22 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
         field("unit", string)
     }
 
+    private val ResourceMetricPoint = basestruct {
+        field("timestamp", long)
+    }
+
+    private val LongResourceMetricPoint = structdef extends ResourceMetricPoint {
+        field("value", long)
+    }
+
+    private val DoubleResourceMetricPoint = structdef extends ResourceMetricPoint {
+        field("value", double)
+    }
+
+    private val HistogramResourceMetricPoint = structdef extends ResourceMetricPoint {
+
+    }
+
     private val ResourceMetric = structdef {
         field("id", ResourceMetricId)
         field("value", double)
@@ -156,9 +172,8 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
         map("resources", string, ResourceWrapper)
 
         list("metricIds", ResourceMetricId)
-        list("metricSubscriptions", ResourceMetricId)
-        sink("metricReceived", ResourceMetric)
         call("getMetricDetails", ResourceMetricId, ResourceMetricDetails.nullable)
+        call("getCurrentMetricPoint", ResourceMetricId, ResourceMetricPoint.nullable)
 
         call("getTraceNodes", void, array(TraceNode))
     }

@@ -1,7 +1,6 @@
 using System.Threading.Channels;
 using AspireSessionHost.Generated;
 using Google.Protobuf.Collections;
-using JetBrains.Collections.Viewable;
 using JetBrains.Lifetimes;
 using JetBrains.Rd.Tasks;
 using OpenTelemetry.Proto.Collector.Metrics.V1;
@@ -21,16 +20,14 @@ internal sealed class MetricService(OTelResourceManager resourceManager, Connect
             FullMode = BoundedChannelFullMode.DropOldest
         });
 
-    private readonly HashSet<ResourceMetricId> _metricValueSubscriptions = new();
-
     internal async Task Initialize()
     {
         _lifetimeDef.Lifetime.StartAttachedAsync(TaskScheduler.Default, async () => await ConsumeMetrics());
 
         await connection.DoWithModel(model =>
         {
-            model.MetricSubscriptions.View(_lifetimeDef.Lifetime, ViewMetricSubscription);
             model.GetMetricDetails.SetSync(GetMetricDetails);
+            model.GetCurrentMetricPoint.SetSync(GetCurrentMetricPoint);
         });
     }
 
@@ -78,18 +75,8 @@ internal sealed class MetricService(OTelResourceManager resourceManager, Connect
                 }
 
                 oTelMetric.AddMetricValue(metric);
-                if (_metricValueSubscriptions.Contains(metricId))
-                {
-                    var resourceMetric = new ResourceMetric(metricId, 1.0, 1716751794002);
-                    await connection.DoWithModel(model => { model.MetricReceived(resourceMetric); });
-                }
             }
         }
-    }
-
-    private void ViewMetricSubscription(Lifetime lifetime, int index, ResourceMetricId metricId)
-    {
-        _metricValueSubscriptions.AddLifetimed(lifetime, metricId);
     }
 
     private ResourceMetricDetails? GetMetricDetails(ResourceMetricId metricId)
@@ -101,6 +88,20 @@ internal sealed class MetricService(OTelResourceManager resourceManager, Connect
         if (metric is null) return null;
 
         return new ResourceMetricDetails(metricId, metric.Description, metric.Unit);
+    }
+
+    private ResourceMetricPoint? GetCurrentMetricPoint(ResourceMetricId metricId)
+    {
+        var resource = resourceManager.Get(metricId.ResourceId);
+        if (resource is null) return null;
+
+        var metric = resource.GetMetric(metricId);
+        if (metric is null) return null;
+
+        var stream = metric.GetMetricStream();
+        if (stream is null) return null;
+
+        return stream.GetCurrentPoint();
     }
 
     public void Dispose()
