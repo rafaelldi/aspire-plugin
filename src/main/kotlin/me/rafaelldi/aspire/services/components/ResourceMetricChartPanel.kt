@@ -6,6 +6,7 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.charts.*
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
+import me.rafaelldi.aspire.generated.ResourceMetricDetails
 import java.awt.Graphics2D
 import java.awt.Paint
 import java.awt.Point
@@ -15,9 +16,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 class ResourceMetricChartPanel(
-    private val metricName: String,
-    private val initialValue: Double,
-    private val unit: String
+    private val metricDetails: ResourceMetricDetails,
+    private val initialValue: Double
 ) : BorderLayoutPanel() {
     companion object {
         private const val TIME_RANGE = 60
@@ -103,11 +103,11 @@ class ResourceMetricChartPanel(
         }
         datasets {
             dataset {
-                label = metricName
+                label = metricDetails.id.metricName
                 lineColor = chartColor
                 fillColor = chartColor.transparent(0.5)
-                valueOverlay = ValueOverlay(this, unit)
-                overlays = listOf(TitleOverlay(metricName, unit, this), valueOverlay)
+                valueOverlay = ValueOverlay(this, metricDetails.unit)
+                overlays = listOf(TitleOverlay(metricDetails.id.metricName, metricDetails.unit, this), valueOverlay)
             }
         }
         borderPainted = true

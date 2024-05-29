@@ -9,10 +9,9 @@ import com.jetbrains.rd.util.lifetime.Lifetime
 import com.jetbrains.rd.util.reactive.AddRemove
 import me.rafaelldi.aspire.generated.AspireSessionHostModel
 import me.rafaelldi.aspire.generated.ResourceMetric
+import me.rafaelldi.aspire.generated.ResourceMetricDetails
 import me.rafaelldi.aspire.generated.ResourceMetricId
-import me.rafaelldi.aspire.run.AspireHostConfig
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.io.path.absolutePathString
 
 @Service(Service.Level.PROJECT)
 class OTelService(private val project: Project) {
@@ -55,17 +54,20 @@ class OTelService(private val project: Project) {
 
     fun subscribeToMetricValues(
         key: String,
-        resourceId: String,
-        metricId: MetricId,
+        resourceMetricId: ResourceMetricId,
         lifetime: Lifetime,
         subscribeAction: (ResourceMetric) -> Unit
     ) {
         val model = oTelServers[key] ?: return
-        val resourceMetricId = ResourceMetricId(resourceId, metricId.scopeName, metricId.metricName)
         model.metricReceived.advise(lifetime) {
             if (it.id != resourceMetricId) return@advise
             subscribeAction(it)
         }
         model.metricSubscriptions.addUnique(lifetime, resourceMetricId)
+    }
+
+    suspend fun getMetricDetails(key: String, resourceMetricId: ResourceMetricId): ResourceMetricDetails? {
+        val model = oTelServers[key] ?: return null
+        return model.getMetricDetails.startSuspending(resourceMetricId)
     }
 }

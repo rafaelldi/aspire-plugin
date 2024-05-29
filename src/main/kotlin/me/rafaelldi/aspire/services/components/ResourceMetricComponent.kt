@@ -1,5 +1,6 @@
 package me.rafaelldi.aspire.services.components
 
+import com.intellij.openapi.application.EDT
 import com.intellij.openapi.project.Project
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.ScrollPaneFactory
@@ -7,13 +8,15 @@ import com.intellij.ui.SideBorder
 import com.intellij.ui.components.JBPanelWithEmptyText
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.jetbrains.rd.util.lifetime.SequentialLifetimes
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.rafaelldi.aspire.AspireBundle
+import me.rafaelldi.aspire.generated.ResourceMetricId
 import me.rafaelldi.aspire.otel.MetricId
 import me.rafaelldi.aspire.otel.OTelService
-import me.rafaelldi.aspire.services.AspireResourceMetricKey
 import me.rafaelldi.aspire.services.AspireResource
 
 class ResourceMetricComponent(
@@ -21,7 +24,6 @@ class ResourceMetricComponent(
     private val project: Project
 ) {
     private val tree = MetricTree(this)
-    private var chosenMetric: AspireResourceMetricKey? = null
     private var chartPanel: ResourceMetricChartPanel? = null
 
     private val splitter = OnePixelSplitter(false).apply {
@@ -35,7 +37,7 @@ class ResourceMetricComponent(
     }
 
     private val metricIds = mutableMapOf<MetricId, Unit>()
-    private val mericIdFlow = MutableSharedFlow<MetricId>(
+    private val metricIdFlow = MutableSharedFlow<MetricId>(
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
         extraBufferCapacity = 100
     )
@@ -44,7 +46,7 @@ class ResourceMetricComponent(
 
     init {
         resourceService.lifetime.coroutineScope.launch {
-            mericIdFlow.collect {
+            metricIdFlow.collect {
                 handleMetricId(it)
             }
         }
@@ -61,14 +63,11 @@ class ResourceMetricComponent(
             resourceId,
             resourceService.lifetime
         ) {
-            mericIdFlow.tryEmit(it)
+            metricIdFlow.tryEmit(it)
         }
     }
 
     fun metricSelected(scope: String, metric: String, value: Double, unit: String) {
-        chosenMetric = AspireResourceMetricKey(scope, metric)
-        chartPanel = ResourceMetricChartPanel(metric, value, unit)
-        splitter.secondComponent = chartPanel
     }
 
     private fun handleMetricId(metricId: MetricId) {
@@ -82,13 +81,25 @@ class ResourceMetricComponent(
         val hostProjectPath = resourceService.hostProjectPath
         val service = OTelService.getInstance(project)
         val lifetime = subscriptionLifetimes.next()
-        service.subscribeToMetricValues(
-            hostProjectPath,
-            resourceId,
-            metricId,
-            lifetime
-        ) {
-            val i = 0
+        val resourceMetricId = ResourceMetricId(resourceId, metricId.scopeName, metricId.metricName)
+
+        resourceService.lifetime.coroutineScope.launch {
+            val metricDetails = withContext(Dispatchers.EDT) {
+                service.getMetricDetails(hostProjectPath, resourceMetricId)
+            } ?: return@launch
+
+            chartPanel = ResourceMetricChartPanel(metricDetails, 0.0)
+            splitter.secondComponent = chartPanel
+
+            withContext(Dispatchers.EDT) {
+                service.subscribeToMetricValues(
+                    hostProjectPath,
+                    resourceMetricId,
+                    lifetime
+                ) {
+                    val i = 0
+                }
+            }
         }
     }
 }
