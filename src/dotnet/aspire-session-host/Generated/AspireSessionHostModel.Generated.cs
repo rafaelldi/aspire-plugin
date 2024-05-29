@@ -51,6 +51,7 @@ namespace AspireSessionHost.Generated
     [NotNull] public IViewableList<ResourceMetricId> MetricIds => _MetricIds;
     [NotNull] public IViewableList<ResourceMetricId> MetricSubscriptions => _MetricSubscriptions;
     [NotNull] public void MetricReceived(ResourceMetric value) => _MetricReceived.Fire(value);
+    [NotNull] public IRdEndpoint<ResourceMetricId, ResourceMetricDetails> GetMetricDetails => _GetMetricDetails;
     [NotNull] public IRdEndpoint<Unit, TraceNode[]> GetTraceNodes => _GetTraceNodes;
     
     //private fields
@@ -63,6 +64,7 @@ namespace AspireSessionHost.Generated
     [NotNull] private readonly RdList<ResourceMetricId> _MetricIds;
     [NotNull] private readonly RdList<ResourceMetricId> _MetricSubscriptions;
     [NotNull] private readonly RdSignal<ResourceMetric> _MetricReceived;
+    [NotNull] private readonly RdCall<ResourceMetricId, ResourceMetricDetails> _GetMetricDetails;
     [NotNull] private readonly RdCall<Unit, TraceNode[]> _GetTraceNodes;
     
     //primary constructor
@@ -76,6 +78,7 @@ namespace AspireSessionHost.Generated
       [NotNull] RdList<ResourceMetricId> metricIds,
       [NotNull] RdList<ResourceMetricId> metricSubscriptions,
       [NotNull] RdSignal<ResourceMetric> metricReceived,
+      [NotNull] RdCall<ResourceMetricId, ResourceMetricDetails> getMetricDetails,
       [NotNull] RdCall<Unit, TraceNode[]> getTraceNodes
     )
     {
@@ -88,6 +91,7 @@ namespace AspireSessionHost.Generated
       if (metricIds == null) throw new ArgumentNullException("metricIds");
       if (metricSubscriptions == null) throw new ArgumentNullException("metricSubscriptions");
       if (metricReceived == null) throw new ArgumentNullException("metricReceived");
+      if (getMetricDetails == null) throw new ArgumentNullException("getMetricDetails");
       if (getTraceNodes == null) throw new ArgumentNullException("getTraceNodes");
       
       _CreateSession = createSession;
@@ -99,10 +103,12 @@ namespace AspireSessionHost.Generated
       _MetricIds = metricIds;
       _MetricSubscriptions = metricSubscriptions;
       _MetricReceived = metricReceived;
+      _GetMetricDetails = getMetricDetails;
       _GetTraceNodes = getTraceNodes;
       _MetricIds.OptimizeNested = true;
       _MetricSubscriptions.OptimizeNested = true;
       _CreateSession.ValueCanBeNull = true;
+      _GetMetricDetails.ValueCanBeNull = true;
       BindableChildren.Add(new KeyValuePair<string, object>("createSession", _CreateSession));
       BindableChildren.Add(new KeyValuePair<string, object>("deleteSession", _DeleteSession));
       BindableChildren.Add(new KeyValuePair<string, object>("processStarted", _ProcessStarted));
@@ -112,6 +118,7 @@ namespace AspireSessionHost.Generated
       BindableChildren.Add(new KeyValuePair<string, object>("metricIds", _MetricIds));
       BindableChildren.Add(new KeyValuePair<string, object>("metricSubscriptions", _MetricSubscriptions));
       BindableChildren.Add(new KeyValuePair<string, object>("metricReceived", _MetricReceived));
+      BindableChildren.Add(new KeyValuePair<string, object>("getMetricDetails", _GetMetricDetails));
       BindableChildren.Add(new KeyValuePair<string, object>("getTraceNodes", _GetTraceNodes));
     }
     //secondary constructor
@@ -126,18 +133,21 @@ namespace AspireSessionHost.Generated
       new RdList<ResourceMetricId>(ResourceMetricId.Read, ResourceMetricId.Write),
       new RdList<ResourceMetricId>(ResourceMetricId.Read, ResourceMetricId.Write),
       new RdSignal<ResourceMetric>(ResourceMetric.Read, ResourceMetric.Write),
+      new RdCall<ResourceMetricId, ResourceMetricDetails>(ResourceMetricId.Read, ResourceMetricId.Write, ReadResourceMetricDetailsNullable, WriteResourceMetricDetailsNullable),
       new RdCall<Unit, TraceNode[]>(JetBrains.Rd.Impl.Serializers.ReadVoid, JetBrains.Rd.Impl.Serializers.WriteVoid, ReadTraceNodeArray, WriteTraceNodeArray)
     ) {}
     //deconstruct trait
     //statics
     
     public static CtxReadDelegate<SessionCreationResult> ReadSessionCreationResultNullable = SessionCreationResult.Read.NullableClass();
+    public static CtxReadDelegate<ResourceMetricDetails> ReadResourceMetricDetailsNullable = ResourceMetricDetails.Read.NullableClass();
     public static CtxReadDelegate<TraceNode[]> ReadTraceNodeArray = TraceNode.Read.Array();
     
     public static  CtxWriteDelegate<SessionCreationResult> WriteSessionCreationResultNullable = SessionCreationResult.Write.NullableClass();
+    public static  CtxWriteDelegate<ResourceMetricDetails> WriteResourceMetricDetailsNullable = ResourceMetricDetails.Write.NullableClass();
     public static  CtxWriteDelegate<TraceNode[]> WriteTraceNodeArray = TraceNode.Write.Array();
     
-    protected override long SerializationHash => -6634680993581815044L;
+    protected override long SerializationHash => 3278040736253536989L;
     
     protected override Action<ISerializers> Register => RegisterDeclaredTypesSerializers;
     public static void RegisterDeclaredTypesSerializers(ISerializers serializers)
@@ -172,6 +182,7 @@ namespace AspireSessionHost.Generated
         printer.Print("metricIds = "); _MetricIds.PrintEx(printer); printer.Println();
         printer.Print("metricSubscriptions = "); _MetricSubscriptions.PrintEx(printer); printer.Println();
         printer.Print("metricReceived = "); _MetricReceived.PrintEx(printer); printer.Println();
+        printer.Print("getMetricDetails = "); _GetMetricDetails.PrintEx(printer); printer.Println();
         printer.Print("getTraceNodes = "); _GetTraceNodes.PrintEx(printer); printer.Println();
       }
       printer.Print(")");
@@ -671,7 +682,7 @@ namespace AspireSessionHost.Generated
   
   
   /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:118</p>
+  /// <p>Generated from: AspireSessionHostModel.kt:124</p>
   /// </summary>
   public sealed class ResourceMetric : IPrintable, IEquatable<ResourceMetric>
   {
@@ -758,6 +769,109 @@ namespace AspireSessionHost.Generated
         printer.Print("id = "); Id.PrintEx(printer); printer.Println();
         printer.Print("value = "); Value.PrintEx(printer); printer.Println();
         printer.Print("timestamp = "); Timestamp.PrintEx(printer); printer.Println();
+      }
+      printer.Print(")");
+    }
+    //toString
+    public override string ToString()
+    {
+      var printer = new SingleLinePrettyPrinter();
+      Print(printer);
+      return printer.ToString();
+    }
+  }
+  
+  
+  /// <summary>
+  /// <p>Generated from: AspireSessionHostModel.kt:118</p>
+  /// </summary>
+  public sealed class ResourceMetricDetails : IPrintable, IEquatable<ResourceMetricDetails>
+  {
+    //fields
+    //public fields
+    [NotNull] public ResourceMetricId Id {get; private set;}
+    [NotNull] public string Description {get; private set;}
+    [NotNull] public string Unit {get; private set;}
+    
+    //private fields
+    //primary constructor
+    public ResourceMetricDetails(
+      [NotNull] ResourceMetricId id,
+      [NotNull] string description,
+      [NotNull] string unit
+    )
+    {
+      if (id == null) throw new ArgumentNullException("id");
+      if (description == null) throw new ArgumentNullException("description");
+      if (unit == null) throw new ArgumentNullException("unit");
+      
+      Id = id;
+      Description = description;
+      Unit = unit;
+    }
+    //secondary constructor
+    //deconstruct trait
+    public void Deconstruct([NotNull] out ResourceMetricId id, [NotNull] out string description, [NotNull] out string unit)
+    {
+      id = Id;
+      description = Description;
+      unit = Unit;
+    }
+    //statics
+    
+    public static CtxReadDelegate<ResourceMetricDetails> Read = (ctx, reader) => 
+    {
+      var id = ResourceMetricId.Read(ctx, reader);
+      var description = reader.ReadString();
+      var unit = reader.ReadString();
+      var _result = new ResourceMetricDetails(id, description, unit);
+      return _result;
+    };
+    
+    public static CtxWriteDelegate<ResourceMetricDetails> Write = (ctx, writer, value) => 
+    {
+      ResourceMetricId.Write(ctx, writer, value.Id);
+      writer.Write(value.Description);
+      writer.Write(value.Unit);
+    };
+    
+    //constants
+    
+    //custom body
+    //methods
+    //equals trait
+    public override bool Equals(object obj)
+    {
+      if (ReferenceEquals(null, obj)) return false;
+      if (ReferenceEquals(this, obj)) return true;
+      if (obj.GetType() != GetType()) return false;
+      return Equals((ResourceMetricDetails) obj);
+    }
+    public bool Equals(ResourceMetricDetails other)
+    {
+      if (ReferenceEquals(null, other)) return false;
+      if (ReferenceEquals(this, other)) return true;
+      return Equals(Id, other.Id) && Description == other.Description && Unit == other.Unit;
+    }
+    //hash code trait
+    public override int GetHashCode()
+    {
+      unchecked {
+        var hash = 0;
+        hash = hash * 31 + Id.GetHashCode();
+        hash = hash * 31 + Description.GetHashCode();
+        hash = hash * 31 + Unit.GetHashCode();
+        return hash;
+      }
+    }
+    //pretty print
+    public void Print(PrettyPrinter printer)
+    {
+      printer.Println("ResourceMetricDetails (");
+      using (printer.IndentCookie()) {
+        printer.Print("id = "); Id.PrintEx(printer); printer.Println();
+        printer.Print("description = "); Description.PrintEx(printer); printer.Println();
+        printer.Print("unit = "); Unit.PrintEx(printer); printer.Println();
       }
       printer.Print(")");
     }
@@ -1691,7 +1805,7 @@ namespace AspireSessionHost.Generated
   
   
   /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:124</p>
+  /// <p>Generated from: AspireSessionHostModel.kt:130</p>
   /// </summary>
   public sealed class TraceNode : IPrintable, IEquatable<TraceNode>
   {
@@ -1817,7 +1931,7 @@ namespace AspireSessionHost.Generated
   
   
   /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:137</p>
+  /// <p>Generated from: AspireSessionHostModel.kt:143</p>
   /// </summary>
   public sealed class TraceNodeAttribute : IPrintable, IEquatable<TraceNodeAttribute>
   {
@@ -1911,7 +2025,7 @@ namespace AspireSessionHost.Generated
   
   
   /// <summary>
-  /// <p>Generated from: AspireSessionHostModel.kt:132</p>
+  /// <p>Generated from: AspireSessionHostModel.kt:138</p>
   /// </summary>
   public sealed class TraceNodeChild : IPrintable, IEquatable<TraceNodeChild>
   {

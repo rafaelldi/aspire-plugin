@@ -115,6 +115,12 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
         field("metricName", string)
     }
 
+    private val ResourceMetricDetails = structdef {
+        field("id", ResourceMetricId)
+        field("description", string)
+        field("unit", string)
+    }
+
     private val ResourceMetric = structdef {
         field("id", ResourceMetricId)
         field("value", double)
@@ -152,6 +158,7 @@ object AspireSessionHostModel : Ext(AspireSessionHostRoot) {
         list("metricIds", ResourceMetricId)
         list("metricSubscriptions", ResourceMetricId)
         sink("metricReceived", ResourceMetric)
+        call("getMetricDetails", ResourceMetricId, ResourceMetricDetails.nullable)
 
         call("getTraceNodes", void, array(TraceNode))
     }

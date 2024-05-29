@@ -12,4 +12,6 @@ internal sealed class OTelResourceManager
         var resource = _resources.GetOrAdd(resourceId, static id => new OTelResource(id));
         return resource;
     }
+
+    internal OTelResource? Get(string resourceId) => _resources.GetValueOrDefault(resourceId);
 }
