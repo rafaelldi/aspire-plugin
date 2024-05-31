@@ -8,7 +8,7 @@ internal sealed class OTelMetricStream
     private const int Capacity = 300;
     private readonly object _lockObj = new();
     private int _index = -1;
-    private readonly List<ResourceMetricPoint> _points = new(Capacity);
+    private readonly ResourceMetricPoint[] _points = new ResourceMetricPoint[Capacity];
 
     internal void AddNumberDataPoint(NumberDataPoint number)
     {
@@ -35,7 +35,7 @@ internal sealed class OTelMetricStream
     {
         lock (_lockObj)
         {
-            if (_index++ == Capacity) _index = 0;
+            if (++_index == Capacity) _index = 0;
             _points[_index] = point;
         }
     }

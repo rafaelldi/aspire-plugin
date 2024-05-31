@@ -72,10 +72,12 @@ class ResourceMetricComponent(
     fun metricSelected(scope: String, metric: String, value: Double, unit: String) {
     }
 
-    private fun handleMetricId(metricId: MetricId) {
+    private suspend fun handleMetricId(metricId: MetricId) {
         val currentValue = metricIds.putIfAbsent(metricId, Unit)
         if (currentValue != null) return
-        tree.addMetricId(metricId)
+        withContext(Dispatchers.EDT) {
+            tree.addMetricId(metricId)
+        }
     }
 
     fun metricSelected(metricId: MetricId) {
@@ -106,11 +108,11 @@ class ResourceMetricComponent(
     private fun updateChart(point: ResourceMetricPoint) {
         when (point) {
             is LongResourceMetricPoint -> {
-
+                chartPanel?.update(point)
             }
 
             is DoubleResourceMetricPoint -> {
-
+                chartPanel?.update(point)
             }
 
             is HistogramResourceMetricPoint -> {

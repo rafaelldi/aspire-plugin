@@ -6,6 +6,8 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.charts.*
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
+import me.rafaelldi.aspire.generated.DoubleResourceMetricPoint
+import me.rafaelldi.aspire.generated.LongResourceMetricPoint
 import me.rafaelldi.aspire.generated.ResourceMetricDetails
 import java.awt.Graphics2D
 import java.awt.Paint
@@ -26,7 +28,7 @@ class ResourceMetricChartPanel(
             .ofPattern("HH:mm:ss")
             .withZone(ZoneId.systemDefault())
 
-        private val chartMargins = JBUI.insets(28, 15, 15, 15)
+        private val chartMargins = JBUI.insets(55, 15, 15, 15)
         private val chartColors =
             listOf(JBColor.BLUE, JBColor.GREEN, JBColor.RED, JBColor.ORANGE, JBColor.PINK, JBColor.YELLOW)
 
@@ -107,7 +109,11 @@ class ResourceMetricChartPanel(
                 lineColor = chartColor
                 fillColor = chartColor.transparent(0.5)
                 valueOverlay = ValueOverlay(this, metricDetails.unit)
-                overlays = listOf(TitleOverlay(metricDetails.id.metricName, metricDetails.unit, this), valueOverlay)
+                overlays = listOf(
+                    TitleOverlay(metricDetails.id.metricName, metricDetails.unit, this),
+                    DescriptionOverlay(metricDetails.description),
+                    valueOverlay
+                )
             }
         }
         borderPainted = true
@@ -126,6 +132,22 @@ class ResourceMetricChartPanel(
         repaint()
     }
 
+    fun update(point: LongResourceMetricPoint) {
+        chart.add(point.timestamp, point.value.toDouble())
+        chart.ranges.xMin = point.timestamp - TIME_RANGE
+        chart.ranges.xMax = point.timestamp
+        chart.ranges.yMax = maxOf(chart.ranges.yMax, point.value.toDouble() + point.value.toDouble() * 0.3)
+        repaint()
+    }
+
+    fun update(point: DoubleResourceMetricPoint) {
+        chart.add(point.timestamp, point.value)
+        chart.ranges.xMin = point.timestamp - TIME_RANGE
+        chart.ranges.xMax = point.timestamp
+        chart.ranges.yMax = maxOf(chart.ranges.yMax, point.value + point.value * 0.3)
+        repaint()
+    }
+
     private class TitleOverlay(
         private val title: String,
         private val label: String,
@@ -139,6 +161,15 @@ class ResourceMetricChartPanel(
             val valueLabel = createValueLabel(value, label)
             val valueLabelWidth = g.fontMetrics.stringWidth(valueLabel)
             g.drawString(valueLabel, chart.width - chart.margins.left - valueLabelWidth, 20)
+        }
+    }
+
+    private class DescriptionOverlay(
+        private val description: String,
+    ) : Overlay<LineChart<*, *, *>>() {
+        override fun paintComponent(g: Graphics2D) {
+            g.color = JBColor.foreground()
+            g.drawString(description, chart.margins.left, 40)
         }
     }
 
